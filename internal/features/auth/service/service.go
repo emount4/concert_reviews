@@ -32,7 +32,12 @@ type AuthRepository interface {
 	CreateUser(ctx context.Context, user core_domain.User) (core_domain.User, error)
 	GetUserByEmail(ctx context.Context, email string) (core_domain.User, error)
 	GetUserByTelegramID(ctx context.Context, tgID int64) (core_domain.User, error)
+	GetUserByID(ctx context.Context, ID uuid.UUID) (core_domain.User, error)
+
 	CreateSession(ctx context.Context, response core_domain.AuthResponse) error
+	GetSession(ctx context.Context, oldToken string) (core_domain.RefreshToken, error)
+	DeleteSession(ctx context.Context, token string) error
+	DeleteAllUserSessions(ctx context.Context, UserID uuid.UUID) error
 
 	LinkTG(ctx context.Context, userID uuid.UUID, username string, tgID int64) error
 }

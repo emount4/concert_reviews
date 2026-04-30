@@ -13,10 +13,18 @@ import (
 )
 
 type JWTManager interface {
-	NewAccessToken(userID uuid.UUID, roleID int, ttl time.Duration) (string, error)
-	Parse(accessToken string) (string, error)
+	NewAccessToken(
+		userID uuid.UUID,
+		roleID int,
+		ttl time.Duration,
+	) (string, error)
+
+	Parse(accessToken string) (*JWTClaims, error)
 	NewRefreshToken() (string, error)
-	Generate(userID uuid.UUID, roleID int, ttl time.Duration) (core_domain.AuthResponse, error)
+	Generate(userID uuid.UUID,
+		roleID int,
+		ttl time.Duration,
+	) (core_domain.AuthResponse, error)
 }
 
 type Manager struct {
@@ -77,26 +85,26 @@ func (m *Manager) NewRefreshToken() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-func (m *Manager) Parse(accessToken string) (string, error) {
+func (m *Manager) Parse(accessToken string) (*JWTClaims, error) {
 	token, err := jwt.ParseWithClaims(
 		accessToken,
-		&jwt.StandardClaims{},
+		&JWTClaims{},
 		func(token *jwt.Token) (interface{}, error) {
-			if token.Method != jwt.SigningMethodHS256 {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
-
 			return []byte(m.signingKey), nil
 		},
 	)
+
 	if err != nil {
-		return "", fmt.Errorf("parse access token: %w", err)
+		return nil, fmt.Errorf("parse token: %w", err)
 	}
 
-	claims, ok := token.Claims.(*jwt.StandardClaims)
+	claims, ok := token.Claims.(*JWTClaims)
 	if !ok || !token.Valid {
-		return "", errors.New("invalid token claims")
+		return nil, errors.New("invalid token claims")
 	}
 
-	return claims.Subject, nil
+	return claims, nil
 }

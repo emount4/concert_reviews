@@ -8,6 +8,7 @@ import (
 	core_domain "github.com/emount4/concert_reviews/internal/core/domain"
 	core_errors "github.com/emount4/concert_reviews/internal/core/errors"
 	core_postgres_tx "github.com/emount4/concert_reviews/internal/core/repository/postgres/tx"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -173,6 +174,70 @@ func (r *AuthRepository) GetUserByTelegramID(
 			return core_domain.User{}, core_errors.ErrNotFound
 		}
 		return core_domain.User{}, fmt.Errorf("get user by telegram id: %w", err)
+	}
+
+	return user, nil
+}
+
+func (r *AuthRepository) GetUserByID(
+	ctx context.Context,
+	userID uuid.UUID,
+) (core_domain.User, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.pool.OpTimeout())
+	defer cancel()
+
+	exec := core_postgres_tx.Executor(r.pool)
+	if txExec, ok := core_postgres_tx.ExecutorFromContext(ctx); ok {
+		exec = txExec
+	}
+
+	query := `
+	SELECT
+		user_id,
+		email,
+		password_hash,
+		tg_id,
+		tg_username,
+		role_id,
+		username,
+		bio,
+		avatar_url,
+		banner_url,
+		is_email_verified,
+		is_active,
+		is_banned,
+		banned_by_user_id,
+		created_at,
+		updated_at
+	FROM users
+	WHERE user_id = $1
+	LIMIT 1
+	`
+
+	var user core_domain.User
+	row := exec.QueryRow(ctx, query, userID)
+	if err := row.Scan(
+		&user.ID,
+		&user.Email,
+		&user.PasswordHash,
+		&user.TelegramID,
+		&user.TelegramUsername,
+		&user.RoleID,
+		&user.Username,
+		&user.Bio,
+		&user.AvatarURL,
+		&user.BannerURL,
+		&user.IsEmailVerified,
+		&user.IsActive,
+		&user.IsBanned,
+		&user.BannedByUserID,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return core_domain.User{}, core_errors.ErrNotFound
+		}
+		return core_domain.User{}, fmt.Errorf("get user by id: %w", err)
 	}
 
 	return user, nil
