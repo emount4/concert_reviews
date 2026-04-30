@@ -2,3 +2,20 @@
 .vscode
 out
 
+# Build artifacts
+/bin/
+/build/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Tests / coverage
+*.test
+coverage.out
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log

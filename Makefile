@@ -65,3 +65,7 @@ migrate-force:
 		-path /migrations \
 		-database postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@concert-postgres:5432/${POSTGRES_DB}?sslmode=disable \
 		force $(v)
+
+app-run: export LOGGER_FOLDER := $(CURDIR)/out/logs
+app-run:
+	@go mod tidy && go run cmd/server/main.go

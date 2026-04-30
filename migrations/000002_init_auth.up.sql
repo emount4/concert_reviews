@@ -52,6 +52,20 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
+ 
+-- 3.1 Токены (refresh / session)
+CREATE TABLE IF NOT EXISTS auth_tokens (
+    token_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    token VARCHAR(255) NOT NULL UNIQUE CHECK (token !~ '^\s*$'),
+    expires_at TIMESTAMP NOT NULL,
+    is_revoked BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    CHECK (expires_at > created_at)
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_tokens_user_id ON auth_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_auth_tokens_expires_at ON auth_tokens(expires_at);
 
 -- 4. Подтверждение почты
 CREATE TABLE IF NOT EXISTS email_verifications (
