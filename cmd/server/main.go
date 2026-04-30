@@ -71,8 +71,8 @@ func main() {
 		//подключение основных мв
 		core_http_middleware.RequestID(),
 		core_http_middleware.Logger(logger),
-		core_http_middleware.Panic(),
 		core_http_middleware.Trace(),
+		core_http_middleware.Panic(),
 	)
 	httpServer.RegisterAPIRouters(apiVersionRouter)
 
