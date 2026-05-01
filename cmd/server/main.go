@@ -17,6 +17,9 @@ import (
 	auth_postgres_repository "github.com/emount4/concert_reviews/internal/features/auth/repository/postgres"
 	auth_service "github.com/emount4/concert_reviews/internal/features/auth/service"
 	auth_transport_http "github.com/emount4/concert_reviews/internal/features/auth/transport/http"
+	city_postgres_repository "github.com/emount4/concert_reviews/internal/features/city/repository/postgres"
+	city_service "github.com/emount4/concert_reviews/internal/features/city/service"
+	city_transport_http "github.com/emount4/concert_reviews/internal/features/city/transport/http"
 
 	// media_service "github.com/emount4/concert_reviews/internal/features/media/service"
 	// media_transport_http "github.com/emount4/concert_reviews/internal/features/media/transport/http"
@@ -55,6 +58,7 @@ func main() {
 	logger.Debug("initializing features", zap.String("features", "auth"))
 	authRepository := auth_postgres_repository.NewAuthRepository(pool)
 	txManager := core_postgres_tx.NewManager(pool)
+	cityRepository := city_postgres_repository.NewCityRepository(pool)
 
 	// s3Config := core_s3.NewConfigMust()
 	// s3Storage, err := core_s3.NewS3Storage(s3Config)
@@ -71,6 +75,17 @@ func main() {
 	authService := auth_service.NewAuthService(authRepository, txManager, authConfig, hasher, jwtManager)
 	authTransportHTTP := auth_transport_http.NewAuthHTTPHandler(authService)
 	authRoutes := authTransportHTTP.Routes()
+
+	cityService := city_service.NewCityService(cityRepository)
+	cityTransportHTTP := city_transport_http.NewCityHTTPHandler(cityService)
+	cityRoutes := cityTransportHTTP.Routes()
+	if len(cityRoutes) > 0 {
+		cityRoutes[0].Middleware = append(
+			cityRoutes[0].Middleware,
+			core_http_middleware.Auth(jwtManager),
+			core_http_middleware.AdminOnly(),
+		)
+	}
 
 	// allowedExt := map[string]bool{
 	// 	".jpg":  true,
@@ -91,6 +106,7 @@ func main() {
 	apiVersionRouter := core_http_server.NewAPIVersionRouter(core_http_server.ApiVersion1)
 	apiVersionRouter.RigisterRoutes(usersRoutes...)
 	apiVersionRouter.RigisterRoutes(authRoutes...)
+	apiVersionRouter.RigisterRoutes(cityRoutes...)
 	// apiVersionRouter.RigisterRoutes(mediaRoutes...)
 
 	httpConfig := core_http_server.NewConfigMust()

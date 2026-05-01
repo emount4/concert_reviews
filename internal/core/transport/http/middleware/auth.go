@@ -2,6 +2,7 @@ package core_http_middleware
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -14,31 +15,42 @@ func Auth(jwtManager auth_service.JWTManager) Middleware {
 			w http.ResponseWriter,
 			r *http.Request,
 		) {
+			w.Header().Set("Content-Type", "application/json")
+
 			authHeader := r.Header.Get("Authorization")
 
 			if authHeader == "" {
-				http.Error(w, "missing auth header", http.StatusUnauthorized)
+				writeJSONError(w, http.StatusUnauthorized, "missing auth header")
 				return
 			}
 
-			parts := strings.Split(authHeader, " ")
+			parts := strings.Fields(authHeader)
 
 			if len(parts) != 2 || parts[0] != "Bearer" {
-				http.Error(w, "Invalid auth header", http.StatusUnauthorized)
+				writeJSONError(w, http.StatusUnauthorized, "invalid auth header")
 				return
 			}
 
 			claims, err := jwtManager.Parse(parts[1])
 
 			if err != nil {
-				w.WriteHeader(http.StatusUnauthorized)
+				writeJSONError(w, http.StatusUnauthorized, "invalid or expired token")
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), "user_id", claims.UserID)
-			ctx = context.WithValue(ctx, "role_id", claims.RoleID)
+			ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
+			ctx = context.WithValue(ctx, RoleIDKey, claims.RoleID)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+func writeJSONError(w http.ResponseWriter, statusCode int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"message": message,
+		"error":   message,
+	})
 }

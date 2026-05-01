@@ -31,7 +31,7 @@ func (s *AuthService) Register(ctx context.Context, user core_domain.User, passw
 	}); err != nil {
 		return core_domain.AuthResponse{}, fmt.Errorf("validate register request: %w", err)
 	}
-	//TODO: ПРИВЯЗКА TG, ЕСЛИ ЕСТЬ INIT DATA
+
 	var tokens core_domain.AuthResponse
 	if err := s.txManager.WithinTx(ctx, func(txCtx context.Context) error {
 		createdUser, err := s.CreateUser(txCtx, user, password)
@@ -52,7 +52,7 @@ func (s *AuthService) Register(ctx context.Context, user core_domain.User, passw
 		tokens = generated
 		return nil
 	}); err != nil {
-		return core_domain.AuthResponse{}, err
+		return core_domain.AuthResponse{}, fmt.Errorf("register withtx: %w ", err)
 	}
 
 	return tokens, nil
