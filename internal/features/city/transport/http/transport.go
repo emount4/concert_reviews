@@ -10,6 +10,11 @@ import (
 
 type Service interface {
 	Create(ctx context.Context, city core_models.City) (core_models.City, error)
+	GetCities(ctx context.Context, limit, offset *int) ([]core_models.City, error)
+	GetCityByID(ctx context.Context, id int) (core_models.City, error)
+
+	Delete(ctx context.Context, id int) error
+	Update(ctx context.Context, id int, name, slug, tz *string) (core_models.City, error)
 }
 
 type CityHTTPHandler struct {
@@ -28,6 +33,26 @@ func (h *CityHTTPHandler) Routes() []core_http_server.Route {
 			Method:  http.MethodPost,
 			Path:    "/cities",
 			Handler: h.Create,
+		},
+		{
+			Method:  http.MethodDelete,
+			Path:    "/cities/{id}",
+			Handler: h.Delete,
+		},
+		{
+			Method:  http.MethodPatch,
+			Path:    "/cities/{id}",
+			Handler: h.Update,
+		},
+		{
+			Method:  http.MethodGet,
+			Path:    "/cities",
+			Handler: h.GetCities,
+		},
+		{
+			Method:  http.MethodGet,
+			Path:    "/cities/{id}",
+			Handler: h.GetCity,
 		},
 	}
 }

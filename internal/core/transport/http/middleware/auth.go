@@ -9,6 +9,7 @@ import (
 	auth_service "github.com/emount4/concert_reviews/internal/features/auth/service"
 )
 
+// TODO: ЗАМЕНИТЬ НА ИНТЕРФЕЙС
 func Auth(jwtManager auth_service.JWTManager) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(

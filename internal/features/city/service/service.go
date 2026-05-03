@@ -12,6 +12,13 @@ type CityService struct {
 
 type CityRepository interface {
 	CreateCity(ctx context.Context, city core_models.City) (core_models.City, error)
+	GetCities(ctx context.Context, limit, offset *int) ([]core_models.City, error)
+	GetCityByID(ctx context.Context, id int) (core_models.City, error)
+
+	DeleteCity(ctx context.Context, id int) error
+	HasVenues(ctx context.Context, id int) (bool, error)
+
+	UpdateCity(ctx context.Context, city core_models.City) (core_models.City, error)
 }
 
 func NewCityService(

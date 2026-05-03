@@ -79,9 +79,20 @@ func main() {
 	cityService := city_service.NewCityService(cityRepository)
 	cityTransportHTTP := city_transport_http.NewCityHTTPHandler(cityService)
 	cityRoutes := cityTransportHTTP.Routes()
-	if len(cityRoutes) > 0 {
+	//костыль
+	if len(cityRoutes) > 2 {
 		cityRoutes[0].Middleware = append(
 			cityRoutes[0].Middleware,
+			core_http_middleware.Auth(jwtManager),
+			core_http_middleware.AdminOnly(),
+		)
+		cityRoutes[1].Middleware = append(
+			cityRoutes[1].Middleware,
+			core_http_middleware.Auth(jwtManager),
+			core_http_middleware.AdminOnly(),
+		)
+		cityRoutes[2].Middleware = append(
+			cityRoutes[2].Middleware,
 			core_http_middleware.Auth(jwtManager),
 			core_http_middleware.AdminOnly(),
 		)
