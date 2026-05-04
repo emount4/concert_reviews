@@ -25,7 +25,7 @@ func (h *MediaHTTPHandler) Routes() []core_http_server.Route {
 	return []core_http_server.Route{
 		{
 			Method:  http.MethodPost,
-			Path:    "/api/v1/media/presign",
+			Path:    "/media/presign",
 			Handler: http.HandlerFunc(h.GetPresignedURLs),
 		},
 	}

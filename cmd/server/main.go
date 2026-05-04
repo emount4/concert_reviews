@@ -11,7 +11,7 @@ import (
 	core_postgres_pool "github.com/emount4/concert_reviews/internal/core/repository/postgres/pool"
 	core_postgres_tx "github.com/emount4/concert_reviews/internal/core/repository/postgres/tx"
 
-	// core_s3 "github.com/emount4/concert_reviews/internal/core/repository/s3"
+	core_s3 "github.com/emount4/concert_reviews/internal/core/repository/s3"
 	core_http_middleware "github.com/emount4/concert_reviews/internal/core/transport/http/middleware"
 	core_http_server "github.com/emount4/concert_reviews/internal/core/transport/http/server"
 	auth_postgres_repository "github.com/emount4/concert_reviews/internal/features/auth/repository/postgres"
@@ -21,8 +21,8 @@ import (
 	city_service "github.com/emount4/concert_reviews/internal/features/city/service"
 	city_transport_http "github.com/emount4/concert_reviews/internal/features/city/transport/http"
 
-	// media_service "github.com/emount4/concert_reviews/internal/features/media/service"
-	// media_transport_http "github.com/emount4/concert_reviews/internal/features/media/transport/http"
+	media_service "github.com/emount4/concert_reviews/internal/features/media/service"
+	media_transport_http "github.com/emount4/concert_reviews/internal/features/media/transport/http"
 	user_transport_http "github.com/emount4/concert_reviews/internal/features/user/transport/http"
 	"go.uber.org/zap"
 )
@@ -60,8 +60,8 @@ func main() {
 	txManager := core_postgres_tx.NewManager(pool)
 	cityRepository := city_postgres_repository.NewCityRepository(pool)
 
-	// s3Config := core_s3.NewConfigMust()
-	// s3Storage, err := core_s3.NewS3Storage(s3Config)
+	s3Config := core_s3.NewConfigMust()
+	s3Storage, err := core_s3.NewS3Storage(logger, s3Config)
 	if err != nil {
 		logger.Fatal("failed to init s3 storage", zap.Error(err))
 	}
@@ -98,27 +98,27 @@ func main() {
 		)
 	}
 
-	// allowedExt := map[string]bool{
-	// 	".jpg":  true,
-	// 	".jpeg": true,
-	// 	".png":  true,
-	// 	".webp": true,
-	// 	".gif":  true,
-	// }
-	// mediaService := media_service.NewMediaService(
-	// 	s3Storage,
-	// 	allowedExt,
-	// 	s3Config.UploadMinMB*1024*1024,
-	// 	s3Config.UploadMaxMB*1024*1024,
-	// )
-	// mediaTransportHTTP := media_transport_http.NewMediaHTTPHandler(mediaService)
-	// mediaRoutes := mediaTransportHTTP.Routes()
+	allowedExt := map[string]bool{
+		".jpg":  true,
+		".jpeg": true,
+		".png":  true,
+		".webp": true,
+		".gif":  true,
+	}
+	mediaService := media_service.NewMediaService(
+		s3Storage,
+		allowedExt,
+		s3Config.UploadMinMB*1024*1024,
+		s3Config.UploadMaxMB*1024*1024,
+	)
+	mediaTransportHTTP := media_transport_http.NewMediaHTTPHandler(mediaService)
+	mediaRoutes := mediaTransportHTTP.Routes()
 
 	apiVersionRouter := core_http_server.NewAPIVersionRouter(core_http_server.ApiVersion1)
 	apiVersionRouter.RigisterRoutes(usersRoutes...)
 	apiVersionRouter.RigisterRoutes(authRoutes...)
 	apiVersionRouter.RigisterRoutes(cityRoutes...)
-	// apiVersionRouter.RigisterRoutes(mediaRoutes...)
+	apiVersionRouter.RigisterRoutes(mediaRoutes...)
 
 	httpConfig := core_http_server.NewConfigMust()
 
