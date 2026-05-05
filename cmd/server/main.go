@@ -11,15 +11,18 @@ import (
 	core_postgres_pool "github.com/emount4/concert_reviews/internal/core/repository/postgres/pool"
 	core_postgres_tx "github.com/emount4/concert_reviews/internal/core/repository/postgres/tx"
 
-	// core_s3 "github.com/emount4/concert_reviews/internal/core/repository/s3"
+	core_s3 "github.com/emount4/concert_reviews/internal/core/repository/s3"
 	core_http_middleware "github.com/emount4/concert_reviews/internal/core/transport/http/middleware"
 	core_http_server "github.com/emount4/concert_reviews/internal/core/transport/http/server"
 	auth_postgres_repository "github.com/emount4/concert_reviews/internal/features/auth/repository/postgres"
 	auth_service "github.com/emount4/concert_reviews/internal/features/auth/service"
 	auth_transport_http "github.com/emount4/concert_reviews/internal/features/auth/transport/http"
+	city_postgres_repository "github.com/emount4/concert_reviews/internal/features/city/repository/postgres"
+	city_service "github.com/emount4/concert_reviews/internal/features/city/service"
+	city_transport_http "github.com/emount4/concert_reviews/internal/features/city/transport/http"
 
-	// media_service "github.com/emount4/concert_reviews/internal/features/media/service"
-	// media_transport_http "github.com/emount4/concert_reviews/internal/features/media/transport/http"
+	media_service "github.com/emount4/concert_reviews/internal/features/media/service"
+	media_transport_http "github.com/emount4/concert_reviews/internal/features/media/transport/http"
 	user_transport_http "github.com/emount4/concert_reviews/internal/features/user/transport/http"
 	"go.uber.org/zap"
 )
@@ -55,9 +58,10 @@ func main() {
 	logger.Debug("initializing features", zap.String("features", "auth"))
 	authRepository := auth_postgres_repository.NewAuthRepository(pool)
 	txManager := core_postgres_tx.NewManager(pool)
+	cityRepository := city_postgres_repository.NewCityRepository(pool)
 
-	// s3Config := core_s3.NewConfigMust()
-	// s3Storage, err := core_s3.NewS3Storage(s3Config)
+	s3Config := core_s3.NewConfigMust()
+	s3Storage, err := core_s3.NewS3Storage(logger, s3Config)
 	if err != nil {
 		logger.Fatal("failed to init s3 storage", zap.Error(err))
 	}
@@ -72,26 +76,32 @@ func main() {
 	authTransportHTTP := auth_transport_http.NewAuthHTTPHandler(authService)
 	authRoutes := authTransportHTTP.Routes()
 
-	// allowedExt := map[string]bool{
-	// 	".jpg":  true,
-	// 	".jpeg": true,
-	// 	".png":  true,
-	// 	".webp": true,
-	// 	".gif":  true,
-	// }
-	// mediaService := media_service.NewMediaService(
-	// 	s3Storage,
-	// 	allowedExt,
-	// 	s3Config.UploadMinMB*1024*1024,
-	// 	s3Config.UploadMaxMB*1024*1024,
-	// )
-	// mediaTransportHTTP := media_transport_http.NewMediaHTTPHandler(mediaService)
-	// mediaRoutes := mediaTransportHTTP.Routes()
+	cityService := city_service.NewCityService(cityRepository)
+	cityTransportHTTP := city_transport_http.NewCityHTTPHandler(cityService)
+	cityRoutes := cityTransportHTTP.Routes()
+	applyRouteAccessPolicy(cityRoutes, jwtManager)
+
+	allowedExt := map[string]bool{
+		".jpg":  true,
+		".jpeg": true,
+		".png":  true,
+		".webp": true,
+		".gif":  true,
+	}
+	mediaService := media_service.NewMediaService(
+		s3Storage,
+		allowedExt,
+		s3Config.UploadMinMB*1024*1024,
+		s3Config.UploadMaxMB*1024*1024,
+	)
+	mediaTransportHTTP := media_transport_http.NewMediaHTTPHandler(mediaService)
+	mediaRoutes := mediaTransportHTTP.Routes()
 
 	apiVersionRouter := core_http_server.NewAPIVersionRouter(core_http_server.ApiVersion1)
 	apiVersionRouter.RigisterRoutes(usersRoutes...)
 	apiVersionRouter.RigisterRoutes(authRoutes...)
-	// apiVersionRouter.RigisterRoutes(mediaRoutes...)
+	apiVersionRouter.RigisterRoutes(cityRoutes...)
+	apiVersionRouter.RigisterRoutes(mediaRoutes...)
 
 	httpConfig := core_http_server.NewConfigMust()
 
@@ -113,5 +123,24 @@ func main() {
 
 	if err := httpServer.Run(ctx); err != nil {
 		logger.Error("HTTP server run error: %w", zap.Error(err))
+	}
+}
+
+func applyRouteAccessPolicy(routes []core_http_server.Route, jwtManager auth_service.JWTManager) {
+	for i := range routes {
+		switch routes[i].Access {
+		case core_http_server.AccessAdminOnly:
+			routes[i].Middleware = append(
+				routes[i].Middleware,
+				core_http_middleware.Auth(jwtManager),
+				core_http_middleware.AdminOnly(),
+			)
+		case core_http_server.AccessSuperAdminOnly:
+			routes[i].Middleware = append(
+				routes[i].Middleware,
+				core_http_middleware.Auth(jwtManager),
+				core_http_middleware.SuperAdminOnly(),
+			)
+		}
 	}
 }

@@ -6,11 +6,20 @@ import (
 	core_http_middleware "github.com/emount4/concert_reviews/internal/core/transport/http/middleware"
 )
 
+type AccessLevel int
+
+const (
+	AccessPublic AccessLevel = iota
+	AccessAdminOnly
+	AccessSuperAdminOnly
+)
+
 type Route struct {
 	Method     string
 	Path       string
 	Handler    http.HandlerFunc
 	Middleware []core_http_middleware.Middleware
+	Access     AccessLevel
 }
 
 func NewRoute(

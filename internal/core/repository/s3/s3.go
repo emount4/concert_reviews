@@ -6,8 +6,10 @@ import (
 	"strings"
 	"time"
 
+	core_logger "github.com/emount4/concert_reviews/internal/core/logger"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"go.uber.org/zap"
 )
 
 type S3Storage struct {
@@ -18,7 +20,7 @@ type S3Storage struct {
 	contentTypes []string
 }
 
-func NewS3Storage(cfg Config) (*S3Storage, error) {
+func NewS3Storage(log *core_logger.Logger, cfg Config) (*S3Storage, error) {
 	client, err := minio.New(
 		cfg.Endpoint,
 		&minio.Options{
@@ -31,6 +33,8 @@ func NewS3Storage(cfg Config) (*S3Storage, error) {
 			Region: cfg.Region,
 		})
 	if err != nil {
+		log.Debug("S3 params \n",
+			zap.String("endpoint", cfg.Endpoint))
 		return nil, fmt.Errorf("init s3 client: %w", err)
 	}
 

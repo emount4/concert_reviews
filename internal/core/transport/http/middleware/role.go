@@ -8,7 +8,7 @@ func AdminOnly() Middleware {
 			roleID, ok := r.Context().Value(RoleIDKey).(int)
 
 			if !ok || roleID < 2 {
-				http.Error(w, "forbidden: admin rights required", http.StatusForbidden)
+				writeJSONError(w, http.StatusForbidden, "forbidden: admin rights required")
 				return
 			}
 
@@ -23,7 +23,7 @@ func SuperAdminOnly() Middleware {
 			roleID, ok := r.Context().Value(RoleIDKey).(int)
 
 			if !ok || roleID < 3 {
-				http.Error(w, "forbidden: super_admin rights required", http.StatusForbidden)
+				writeJSONError(w, http.StatusForbidden, "forbidden: super_admin rights required")
 				return
 			}
 

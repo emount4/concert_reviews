@@ -11,6 +11,7 @@ import (
 type Service interface {
 	Register(ctx context.Context, user core_domain.User, password string) (core_domain.AuthResponse, error)
 	Login(ctx context.Context, email, password string) (core_domain.AuthResponse, error)
+	Logout(ctx context.Context, token string) error
 	Refresh(ctx context.Context, oldToken string) (core_domain.AuthResponse, error)
 
 	LinkTG(ctx context.Context, user core_domain.User, initData string) error
@@ -46,6 +47,11 @@ func (h *AuthHTTPHandler) Routes() []core_http_server.Route {
 			Method:  http.MethodPost,
 			Path:    "/auth/refresh",
 			Handler: h.Refresh,
+		},
+		{
+			Method:  http.MethodPost,
+			Path:    "/auth/logout",
+			Handler: http.HandlerFunc(h.Logout),
 		},
 	}
 }

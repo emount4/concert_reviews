@@ -8,23 +8,18 @@ import (
 	"time"
 
 	core_models "github.com/emount4/concert_reviews/internal/core/domain/models"
+	core_ports "github.com/emount4/concert_reviews/internal/core/domain/ports"
 	"github.com/google/uuid"
 )
 
-// S3Provider — интерфейс, который должен реализовать наш пакет инфраструктуры (core_s3)
-type S3Provider interface {
-	GetUploadURL(ctx context.Context, objectName string, expires time.Duration) (string, error)
-	GetUploadForm(ctx context.Context, objectName string, expires time.Duration) (string, map[string]string, error)
-}
-
 type MediaService struct {
-	s3            S3Provider
+	s3            core_ports.S3Provider
 	allowedExt    map[string]bool
 	minUploadSize int64
 	maxUploadSize int64
 }
 
-func NewMediaService(s3 S3Provider, allowedExtensions map[string]bool, minUploadSize, maxUploadSize int64) *MediaService {
+func NewMediaService(s3 core_ports.S3Provider, allowedExtensions map[string]bool, minUploadSize, maxUploadSize int64) *MediaService {
 	return &MediaService{
 		s3:            s3,
 		allowedExt:    allowedExtensions,
