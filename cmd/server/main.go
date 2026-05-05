@@ -79,24 +79,7 @@ func main() {
 	cityService := city_service.NewCityService(cityRepository)
 	cityTransportHTTP := city_transport_http.NewCityHTTPHandler(cityService)
 	cityRoutes := cityTransportHTTP.Routes()
-	//костыль
-	if len(cityRoutes) > 2 {
-		cityRoutes[0].Middleware = append(
-			cityRoutes[0].Middleware,
-			core_http_middleware.Auth(jwtManager),
-			core_http_middleware.AdminOnly(),
-		)
-		cityRoutes[1].Middleware = append(
-			cityRoutes[1].Middleware,
-			core_http_middleware.Auth(jwtManager),
-			core_http_middleware.AdminOnly(),
-		)
-		cityRoutes[2].Middleware = append(
-			cityRoutes[2].Middleware,
-			core_http_middleware.Auth(jwtManager),
-			core_http_middleware.AdminOnly(),
-		)
-	}
+	applyRouteAccessPolicy(cityRoutes, jwtManager)
 
 	allowedExt := map[string]bool{
 		".jpg":  true,
@@ -140,5 +123,24 @@ func main() {
 
 	if err := httpServer.Run(ctx); err != nil {
 		logger.Error("HTTP server run error: %w", zap.Error(err))
+	}
+}
+
+func applyRouteAccessPolicy(routes []core_http_server.Route, jwtManager auth_service.JWTManager) {
+	for i := range routes {
+		switch routes[i].Access {
+		case core_http_server.AccessAdminOnly:
+			routes[i].Middleware = append(
+				routes[i].Middleware,
+				core_http_middleware.Auth(jwtManager),
+				core_http_middleware.AdminOnly(),
+			)
+		case core_http_server.AccessSuperAdminOnly:
+			routes[i].Middleware = append(
+				routes[i].Middleware,
+				core_http_middleware.Auth(jwtManager),
+				core_http_middleware.SuperAdminOnly(),
+			)
+		}
 	}
 }

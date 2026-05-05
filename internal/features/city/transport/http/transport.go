@@ -33,16 +33,19 @@ func (h *CityHTTPHandler) Routes() []core_http_server.Route {
 			Method:  http.MethodPost,
 			Path:    "/cities",
 			Handler: h.Create,
+			Access:  core_http_server.AccessAdminOnly,
 		},
 		{
 			Method:  http.MethodDelete,
 			Path:    "/cities/{id}",
 			Handler: h.Delete,
+			Access:  core_http_server.AccessAdminOnly,
 		},
 		{
 			Method:  http.MethodPatch,
 			Path:    "/cities/{id}",
 			Handler: h.Update,
+			Access:  core_http_server.AccessAdminOnly,
 		},
 		{
 			Method:  http.MethodGet,
