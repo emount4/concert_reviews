@@ -14,6 +14,9 @@ import (
 	core_s3 "github.com/emount4/concert_reviews/internal/core/repository/s3"
 	core_http_middleware "github.com/emount4/concert_reviews/internal/core/transport/http/middleware"
 	core_http_server "github.com/emount4/concert_reviews/internal/core/transport/http/server"
+	artist_postgres_repository "github.com/emount4/concert_reviews/internal/features/artist/repository/postgres"
+	artist_service "github.com/emount4/concert_reviews/internal/features/artist/service"
+	artist_transport_http "github.com/emount4/concert_reviews/internal/features/artist/transport/http"
 	auth_postgres_repository "github.com/emount4/concert_reviews/internal/features/auth/repository/postgres"
 	auth_service "github.com/emount4/concert_reviews/internal/features/auth/service"
 	auth_transport_http "github.com/emount4/concert_reviews/internal/features/auth/transport/http"
@@ -59,6 +62,7 @@ func main() {
 	authRepository := auth_postgres_repository.NewAuthRepository(pool)
 	txManager := core_postgres_tx.NewManager(pool)
 	cityRepository := city_postgres_repository.NewCityRepository(pool)
+	artistRepository := artist_postgres_repository.NewArtistRepository(pool)
 
 	s3Config := core_s3.NewConfigMust()
 	s3Storage, err := core_s3.NewS3Storage(logger, s3Config)
@@ -76,10 +80,15 @@ func main() {
 	authTransportHTTP := auth_transport_http.NewAuthHTTPHandler(authService)
 	authRoutes := authTransportHTTP.Routes()
 
+	artistService := artist_service.NewArtistService(artistRepository)
+	artistsTransportHTTP := artist_transport_http.NewArtistHTTPHandler(artistService)
+	artistRoutes := artistsTransportHTTP.Routes()
+
 	cityService := city_service.NewCityService(cityRepository)
 	cityTransportHTTP := city_transport_http.NewCityHTTPHandler(cityService)
 	cityRoutes := cityTransportHTTP.Routes()
 	applyRouteAccessPolicy(cityRoutes, jwtManager)
+	applyRouteAccessPolicy(artistRoutes, jwtManager)
 
 	allowedExt := map[string]bool{
 		".jpg":  true,
@@ -102,6 +111,7 @@ func main() {
 	apiVersionRouter.RigisterRoutes(authRoutes...)
 	apiVersionRouter.RigisterRoutes(cityRoutes...)
 	apiVersionRouter.RigisterRoutes(mediaRoutes...)
+	apiVersionRouter.RigisterRoutes(artistRoutes...)
 
 	httpConfig := core_http_server.NewConfigMust()
 
