@@ -80,7 +80,7 @@ func main() {
 	authTransportHTTP := auth_transport_http.NewAuthHTTPHandler(authService)
 	authRoutes := authTransportHTTP.Routes()
 
-	artistService := artist_service.NewArtistService(artistRepository)
+	artistService := artist_service.NewArtistService(artistRepository, s3Storage)
 	artistsTransportHTTP := artist_transport_http.NewArtistHTTPHandler(artistService)
 	artistRoutes := artistsTransportHTTP.Routes()
 

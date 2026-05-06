@@ -18,7 +18,7 @@ func (h *ArtistHTTPHandler) Create(rw http.ResponseWriter, r *http.Request) {
 		r,
 		&req,
 	); err != nil {
-		responseHandler.ErrorResponse(err, "failed to decode artist request")
+		responseHandler.ErrorResponse(err, "failed to decode artist post request")
 		return
 	}
 

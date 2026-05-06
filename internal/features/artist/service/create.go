@@ -14,6 +14,12 @@ func (s *ArtistService) CreateArtist(ctx context.Context, artist domain.Artist) 
 		return domain.Artist{}, fmt.Errorf("validate artist: %w", err)
 	}
 
+	if artist.PhotoURL != nil {
+		if _, err := s.s3.FileExists(ctx, *artist.PhotoURL); err != nil {
+			return domain.Artist{}, fmt.Errorf("artist image not found: %w", err)
+		}
+	}
+
 	artist.Status = domain.StatusActive
 
 	createdArtist, err := s.artistRepository.CreateArtist(ctx, artist)

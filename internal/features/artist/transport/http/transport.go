@@ -12,6 +12,7 @@ type Service interface {
 	CreateArtist(ctx context.Context, city domain.Artist) (domain.Artist, error)
 	GetArtistByID(ctx context.Context, id int) (domain.Artist, error)
 	GetArtists(ctx context.Context, search string, limit, offset *int) ([]domain.Artist, error)
+	PatchArtist(ctx context.Context, id int, patch domain.ArtistPatch) (domain.Artist, error)
 }
 
 type ArtistHTTPHandler struct {
@@ -42,6 +43,12 @@ func (h *ArtistHTTPHandler) Routes() []core_http_server.Route {
 			Method:  http.MethodPost,
 			Path:    "/artists",
 			Handler: h.Create,
+			Access:  core_http_server.AccessAdminOnly,
+		},
+		{
+			Method:  http.MethodPatch,
+			Path:    "/artists/{id}",
+			Handler: h.PatchArtist,
 			Access:  core_http_server.AccessAdminOnly,
 		},
 	}

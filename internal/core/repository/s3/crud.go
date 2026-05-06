@@ -31,3 +31,12 @@ func (s *S3Storage) GetPublicURL(objectName string) string {
 	// Для простоты возвращаем прямую ссылку на облако
 	return fmt.Sprintf("%s/%s/%s", s.client.EndpointURL().String(), s.bucketName, objectName)
 }
+
+func (s *S3Storage) FileExists(ctx context.Context, objectName string) (int64, error) {
+	// HeadObject возвращает информацию о файле без его скачивания
+	info, err := s.client.StatObject(ctx, s.bucketName, objectName, minio.StatObjectOptions{})
+	if err != nil {
+		return 0, fmt.Errorf("file not found in s3: %w", err)
+	}
+	return info.Size, nil
+}

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/emount4/concert_reviews/internal/core/domain"
+	core_http_types "github.com/emount4/concert_reviews/internal/core/transport/http/types"
 )
 
 type CreateArtistRequest struct {
@@ -13,12 +14,12 @@ type CreateArtistRequest struct {
 	SocialLinks map[string]string `json:"social_links"`
 }
 
-// type UpdateArtistRequest struct {
-// 	Name        *string           `json:"name" validate:"omitempty,min=2,max=255"`
-// 	Description *string           `json:"description" validate:"omitempty,max=2000"`
-// 	PhotoKey    *string           `json:"photo_key" validate:"omitempty,max=2048"`
-// 	SocialLinks map[string]string `json:"social_links"`
-// }
+type UpdateArtistRequest struct {
+	Name        core_http_types.Nullable[string]        `json:"name"`
+	Description core_http_types.Nullable[string]        `json:"description"`
+	PhotoKey    core_http_types.Nullable[string]        `json:"photo_key"`
+	SocialLinks core_http_types.NullableMapStringString `json:"social_links"`
+}
 
 // --- Responses (DTO для выхода) ---
 
@@ -91,4 +92,13 @@ func MapDomainListToResponse(artists []domain.Artist) ListArtistsResponse {
 		items[i] = MapDomainToResponse(a)
 	}
 	return ListArtistsResponse{Items: items}
+}
+
+func MapPatchReqToDomain(req UpdateArtistRequest) domain.ArtistPatch {
+	return domain.ArtistPatch{
+		Name:        req.Name.ToDomain(),
+		Description: req.Description.ToDomain(),
+		PhotoKey:    req.PhotoKey.ToDomain(),
+		SocialLinks: req.SocialLinks,
+	}
 }

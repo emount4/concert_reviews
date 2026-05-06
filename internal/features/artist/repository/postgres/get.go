@@ -59,11 +59,9 @@ func (r *ArtistRepository) GetArtists(ctx context.Context, search string, limit,
 	query += ` ORDER BY name ASC`
 
 	// Пагинация
-	if limit != nil && offset != nil {
-		argNum := len(args) + 1
-		query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argNum, argNum+1)
-		args = append(args, *limit, *offset)
-	}
+	argNum := len(args) + 1
+	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argNum, argNum+1)
+	args = append(args, limit, offset)
 
 	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {

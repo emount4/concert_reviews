@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	core_errors "github.com/emount4/concert_reviews/internal/core/errors"
+	core_http_types "github.com/emount4/concert_reviews/internal/core/transport/http/types"
+	core_types "github.com/emount4/concert_reviews/internal/core/types"
 )
 
 // ContentStatus — тип для статуса контента (Enum)
@@ -58,4 +62,54 @@ func (a *Artist) Validate() error {
 // IsDeleted — вспомогательный метод для проверки статуса удаления
 func (a *Artist) IsDeleted() bool {
 	return a.DeletedAt != nil
+}
+
+type ArtistPatch struct {
+	Name        core_types.Nullable[string]             `json:"name" validate:"omitempty,min=2,max=255"`
+	Description core_types.Nullable[string]             `json:"description" validate:"omitempty,max=2000"`
+	PhotoKey    core_types.Nullable[string]             `json:"photo_key" validate:"omitempty,max=2048"`
+	SocialLinks core_http_types.NullableMapStringString `json:"social_links"`
+}
+
+func (p *ArtistPatch) Validate() error {
+	if p.Name.Set && p.Name.Value == nil {
+		return fmt.Errorf("name cant be patched to NULL: %w", core_errors.ErrInvalidArgument)
+	}
+	return nil
+}
+
+func (a *Artist) ApplyPatch(patch ArtistPatch) error {
+	if err := patch.Validate(); err != nil {
+		return fmt.Errorf("validate artist patch: %w", err)
+	}
+
+	tmp := *a
+
+	if patch.Name.Set {
+		tmp.Name = *patch.Name.Value
+	}
+
+	if patch.Description.Set {
+		tmp.Description = patch.Description.Value
+	}
+
+	if patch.PhotoKey.Set {
+		tmp.PhotoURL = patch.PhotoKey.Value
+	}
+
+	if patch.SocialLinks.Set {
+		if patch.SocialLinks.Value == nil {
+			tmp.SocialLinks = nil
+		} else {
+			tmp.SocialLinks = *patch.SocialLinks.Value
+		}
+	}
+
+	if err := tmp.Validate(); err != nil {
+		return fmt.Errorf("validate patched artist: %w", err)
+	}
+
+	*a = tmp
+
+	return nil
 }
