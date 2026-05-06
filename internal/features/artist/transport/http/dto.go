@@ -102,3 +102,51 @@ func MapPatchReqToDomain(req UpdateArtistRequest) domain.ArtistPatch {
 		SocialLinks: req.SocialLinks,
 	}
 }
+
+type ArtistAdminResponse struct {
+	ID          int               `json:"id"`
+	Name        string            `json:"name"`
+	Description string            `json:"description,omitempty"`
+	PhotoURL    string            `json:"photo_url,omitempty"`
+	SocialLinks map[string]string `json:"social_links,omitempty"`
+	Status      string            `json:"status"`
+	CreatedAt   string            `json:"created_at"`
+	DeletedAt   *string           `json:"deleted_at,omitempty"` // показываем только в админке
+	IsDeleted   bool              `json:"is_deleted"`
+}
+
+type ListArtistsAdminResponse struct {
+	Items []ArtistAdminResponse `json:"items"`
+}
+
+func MapDomainToAdminResponse(a domain.Artist) ArtistAdminResponse {
+	resp := ArtistAdminResponse{
+		ID:        a.ArtistID,
+		Name:      a.Name,
+		Status:    string(a.Status),
+		CreatedAt: a.CreatedAt.Format(time.RFC3339),
+		IsDeleted: a.DeletedAt != nil,
+	}
+	if a.Description != nil {
+		resp.Description = *a.Description
+	}
+	if a.PhotoURL != nil {
+		resp.PhotoURL = *a.PhotoURL
+	}
+	if a.SocialLinks != nil {
+		resp.SocialLinks = a.SocialLinks
+	}
+	if a.DeletedAt != nil {
+		s := a.DeletedAt.Format(time.RFC3339)
+		resp.DeletedAt = &s
+	}
+	return resp
+}
+
+func MapDomainListToAdminResponse(artists []domain.Artist) ListArtistsAdminResponse {
+	items := make([]ArtistAdminResponse, len(artists))
+	for i, a := range artists {
+		items[i] = MapDomainToAdminResponse(a)
+	}
+	return ListArtistsAdminResponse{Items: items}
+}

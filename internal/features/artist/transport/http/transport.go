@@ -13,6 +13,16 @@ type Service interface {
 	GetArtistByID(ctx context.Context, id int) (domain.Artist, error)
 	GetArtists(ctx context.Context, search string, limit, offset *int) ([]domain.Artist, error)
 	PatchArtist(ctx context.Context, id int, patch domain.ArtistPatch) (domain.Artist, error)
+	DeleteArtistHard(ctx context.Context, id int) error
+	DeleteArtistSoft(ctx context.Context, id int) error
+	RestoreArtist(ctx context.Context, id int) (domain.Artist, error)
+	GetArtistsAdmin(
+		ctx context.Context,
+		search string,
+		limit, offset *int,
+		includeDeleted bool,
+		status string,
+	) ([]domain.Artist, error)
 }
 
 type ArtistHTTPHandler struct {
@@ -49,6 +59,30 @@ func (h *ArtistHTTPHandler) Routes() []core_http_server.Route {
 			Method:  http.MethodPatch,
 			Path:    "/artists/{id}",
 			Handler: h.PatchArtist,
+			Access:  core_http_server.AccessAdminOnly,
+		},
+		{
+			Method:  http.MethodDelete,
+			Path:    "/artists-hard/{id}",
+			Handler: h.DeleteArtistHard,
+			Access:  core_http_server.AccessAdminOnly,
+		},
+		{
+			Method:  http.MethodDelete,
+			Path:    "/artists-soft/{id}",
+			Handler: h.DeleteArtistSoft,
+			Access:  core_http_server.AccessAdminOnly,
+		},
+		{
+			Method:  http.MethodPost,
+			Path:    "/artists/{id}/restore",
+			Handler: h.RestoreArtist,
+			Access:  core_http_server.AccessAdminOnly,
+		},
+		{
+			Method:  http.MethodGet,
+			Path:    "/admin/artists",
+			Handler: h.GetArtistsAdmin,
 			Access:  core_http_server.AccessAdminOnly,
 		},
 	}

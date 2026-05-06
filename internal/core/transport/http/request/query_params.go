@@ -32,3 +32,18 @@ func GetStringQueryParam(r *http.Request, key string) *string {
 	param := r.URL.Query().Get(key)
 	return &param
 }
+
+func GetBoolQueryParam(r *http.Request, key string) *bool {
+	param := r.URL.Query().Get(key)
+
+	switch param {
+	case "true":
+		v := true
+		return &v
+	case "false":
+		v := false
+		return &v
+	default:
+		return nil
+	}
+}
