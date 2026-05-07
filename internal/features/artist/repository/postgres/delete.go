@@ -46,7 +46,7 @@ func (r *ArtistRepository) DeleteArtistSoft(ctx context.Context, id int) error {
 
 	query := `
 		UPDATE artists 
-		SET deleted_at = NOW() 
+		SET deleted_at = NOW(), status = 'hidden'
 		WHERE artist_id = $1 AND deleted_at IS NULL
 	`
 

@@ -23,7 +23,6 @@ type ArtistRepository interface {
 	GetArtistDependencies(ctx context.Context, id int) (ArtistDependencies, error)
 	RestoreArtist(ctx context.Context, id int) (domain.Artist, error)
 
-	// Админский список с фильтрами
 	GetArtistsAdmin(
 		ctx context.Context,
 		search string,
