@@ -3,8 +3,6 @@ package core_s3
 import (
 	"context"
 	"fmt"
-	"strings"
-	"time"
 
 	core_logger "github.com/emount4/concert_reviews/internal/core/logger"
 	"github.com/minio/minio-go/v7"
@@ -57,67 +55,4 @@ func NewS3Storage(log *core_logger.Logger, cfg Config) (*S3Storage, error) {
 	}
 
 	return storage, nil
-}
-
-func (s *S3Storage) GetUploadURL(
-	ctx context.Context,
-	objectName string,
-	expires time.Duration,
-) (string, error) {
-	presignedURL, err := s.client.PresignedPutObject(ctx, s.bucketName, objectName, expires)
-	if err != nil {
-		return "", fmt.Errorf("generate presigned put url: %w", err)
-	}
-	return presignedURL.String(), nil
-}
-
-func (s *S3Storage) GetUploadForm(
-	ctx context.Context,
-	objectName string,
-	expires time.Duration,
-) (string, map[string]string, error) {
-	policy := minio.NewPostPolicy()
-	if err := policy.SetBucket(s.bucketName); err != nil {
-		return "", nil, fmt.Errorf("set bucket policy: %w", err)
-	}
-	if err := policy.SetKey(objectName); err != nil {
-		return "", nil, fmt.Errorf("set object key policy: %w", err)
-	}
-	if err := policy.SetExpires(time.Now().Add(expires)); err != nil {
-		return "", nil, fmt.Errorf("set policy expiry: %w", err)
-	}
-	if err := policy.SetContentLengthRange(s.minSize, s.maxSize); err != nil {
-		return "", nil, fmt.Errorf("set size policy: %w", err)
-	}
-	if len(s.contentTypes) > 0 {
-		contentTypeStartsWith := strings.Join(s.contentTypes, ",")
-		if err := policy.SetContentTypeStartsWith(contentTypeStartsWith); err != nil {
-			return "", nil, fmt.Errorf("set content type policy: %w", err)
-		}
-	}
-
-	url, formData, err := s.client.PresignedPostPolicy(ctx, policy)
-	if err != nil {
-		return "", nil, fmt.Errorf("generate presigned post policy: %w", err)
-	}
-
-	result := make(map[string]string, len(formData)+1)
-	for k, v := range formData {
-		result[k] = v
-	}
-	result["url"] = url.String()
-
-	return url.String(), result, nil
-}
-
-func parseAllowedTypes(raw string) []string {
-	parts := strings.Split(raw, ",")
-	result := make([]string, 0, len(parts))
-	for _, part := range parts {
-		value := strings.TrimSpace(part)
-		if value != "" {
-			result = append(result, value)
-		}
-	}
-	return result
 }

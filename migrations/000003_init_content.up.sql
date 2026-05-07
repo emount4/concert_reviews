@@ -25,7 +25,7 @@ END $$;
 -- ==========================================
 
 CREATE TABLE IF NOT EXISTS venues (
-    venue_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    venue_id SERIAL PRIMARY KEY,
     city_id INTEGER NOT NULL REFERENCES cities(city_id) ON DELETE RESTRICT,
     name VARCHAR(255) NOT NULL CHECK (name !~ '^\s*$'),
     address TEXT CHECK (address !~ '^\s*$'),
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS venues (
 );
 
 CREATE TABLE IF NOT EXISTS artists (
-    artist_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    artist_id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL CHECK (name !~ '^\s*$'),
     description TEXT CHECK (LENGTH(description) <= 2000),
     photo_url TEXT CHECK (photo_url IS NULL OR (photo_url !~ '^\s*$' AND LENGTH(photo_url) <= 2048)),
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS artists (
 
 CREATE TABLE IF NOT EXISTS concerts (
     concert_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    venue_id UUID NOT NULL REFERENCES venues(venue_id) ON DELETE RESTRICT,
+    venue_id INTEGER NOT NULL REFERENCES venues(venue_id) ON DELETE RESTRICT,
     title VARCHAR(255) NOT NULL CHECK (title !~ '^\s*$'),
     date TIMESTAMP NOT NULL,
     poster_url TEXT CHECK (poster_url IS NULL OR (poster_url !~ '^\s*$' AND LENGTH(poster_url) <= 2048)),
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS concerts (
 -- Многие-ко-многим: Артисты на Концерте
 CREATE TABLE IF NOT EXISTS concert_artists (
     concert_id UUID REFERENCES concerts(concert_id) ON DELETE CASCADE,
-    artist_id UUID REFERENCES artists(artist_id) ON DELETE CASCADE,
+    artist_id INTEGER REFERENCES artists(artist_id) ON DELETE CASCADE,
     is_main BOOLEAN DEFAULT TRUE,
     PRIMARY KEY (concert_id, artist_id)
 );
@@ -167,14 +167,14 @@ CREATE TABLE IF NOT EXISTS concert_stats (
 );
 
 CREATE TABLE IF NOT EXISTS artist_stats (
-    artist_id UUID PRIMARY KEY REFERENCES artists(artist_id) ON DELETE CASCADE,
+    artist_id INTEGER PRIMARY KEY REFERENCES artists(artist_id) ON DELETE CASCADE,
     sum_rating_total BIGINT DEFAULT 0 CHECK (sum_rating_total >= 0),
     reviews_count INTEGER DEFAULT 0 CHECK (reviews_count >= 0),
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS venue_stats (
-    venue_id UUID PRIMARY KEY REFERENCES venues(venue_id) ON DELETE CASCADE,
+    venue_id INTEGER PRIMARY KEY REFERENCES venues(venue_id) ON DELETE CASCADE,
     sum_rating_total BIGINT DEFAULT 0 CHECK (sum_rating_total >= 0),
     reviews_count INTEGER DEFAULT 0 CHECK (reviews_count >= 0),
     updated_at TIMESTAMP DEFAULT NOW()

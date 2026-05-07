@@ -11,6 +11,10 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+type Validator interface {
+	Validate() error
+}
+
 var requestValidator = validator.New()
 
 func DecodeAndValidateRequest(r *http.Request, dest any) error {
@@ -42,6 +46,12 @@ func DecodeAndValidateRequest(r *http.Request, dest any) error {
 
 	if err := requestValidator.Struct(dest); err != nil {
 		return fmt.Errorf("request validation: %w", err)
+	}
+
+	if v, ok := dest.(Validator); ok {
+		if err := v.Validate(); err != nil {
+			return fmt.Errorf("custom validation: %w", err)
+		}
 	}
 
 	return nil

@@ -14,16 +14,21 @@ import (
 	core_s3 "github.com/emount4/concert_reviews/internal/core/repository/s3"
 	core_http_middleware "github.com/emount4/concert_reviews/internal/core/transport/http/middleware"
 	core_http_server "github.com/emount4/concert_reviews/internal/core/transport/http/server"
+	artist_postgres_repository "github.com/emount4/concert_reviews/internal/features/artist/repository/postgres"
+	artist_service "github.com/emount4/concert_reviews/internal/features/artist/service"
+	artist_transport_http "github.com/emount4/concert_reviews/internal/features/artist/transport/http"
 	auth_postgres_repository "github.com/emount4/concert_reviews/internal/features/auth/repository/postgres"
 	auth_service "github.com/emount4/concert_reviews/internal/features/auth/service"
 	auth_transport_http "github.com/emount4/concert_reviews/internal/features/auth/transport/http"
 	city_postgres_repository "github.com/emount4/concert_reviews/internal/features/city/repository/postgres"
 	city_service "github.com/emount4/concert_reviews/internal/features/city/service"
 	city_transport_http "github.com/emount4/concert_reviews/internal/features/city/transport/http"
+	venue_postgres_repository "github.com/emount4/concert_reviews/internal/features/venues/repository/postgres"
+	venue_service "github.com/emount4/concert_reviews/internal/features/venues/service"
+	venue_transport_http "github.com/emount4/concert_reviews/internal/features/venues/transport/http"
 
 	media_service "github.com/emount4/concert_reviews/internal/features/media/service"
 	media_transport_http "github.com/emount4/concert_reviews/internal/features/media/transport/http"
-	user_transport_http "github.com/emount4/concert_reviews/internal/features/user/transport/http"
 	"go.uber.org/zap"
 )
 
@@ -55,10 +60,7 @@ func main() {
 	}
 	defer pool.Close()
 
-	logger.Debug("initializing features", zap.String("features", "auth"))
-	authRepository := auth_postgres_repository.NewAuthRepository(pool)
 	txManager := core_postgres_tx.NewManager(pool)
-	cityRepository := city_postgres_repository.NewCityRepository(pool)
 
 	s3Config := core_s3.NewConfigMust()
 	s3Storage, err := core_s3.NewS3Storage(logger, s3Config)
@@ -66,9 +68,8 @@ func main() {
 		logger.Fatal("failed to init s3 storage", zap.Error(err))
 	}
 
-	usersTransportHTTP := user_transport_http.NewUsersHTTPHandler(nil)
-	usersRoutes := usersTransportHTTP.Routes()
-
+	logger.Debug("initializing features", zap.String("features", "auth"))
+	authRepository := auth_postgres_repository.NewAuthRepository(pool)
 	authConfig := auth_service.NewConfigMust()
 	hasher := auth_service.NewSHA1Hasher(authConfig.PasswordSalt)
 	jwtManager := auth_service.NewManager(authConfig.JWTSigningKey)
@@ -76,10 +77,26 @@ func main() {
 	authTransportHTTP := auth_transport_http.NewAuthHTTPHandler(authService)
 	authRoutes := authTransportHTTP.Routes()
 
+	logger.Debug("initializing features", zap.String("features", "artist"))
+	artistRepository := artist_postgres_repository.NewArtistRepository(pool)
+	artistService := artist_service.NewArtistService(artistRepository, s3Storage)
+	artistsTransportHTTP := artist_transport_http.NewArtistHTTPHandler(artistService)
+	artistRoutes := artistsTransportHTTP.Routes()
+	applyRouteAccessPolicy(artistRoutes, jwtManager)
+
+	logger.Debug("initializing features", zap.String("features", "city"))
+	cityRepository := city_postgres_repository.NewCityRepository(pool)
 	cityService := city_service.NewCityService(cityRepository)
 	cityTransportHTTP := city_transport_http.NewCityHTTPHandler(cityService)
 	cityRoutes := cityTransportHTTP.Routes()
 	applyRouteAccessPolicy(cityRoutes, jwtManager)
+
+	logger.Debug("initializing features", zap.String("features", "venue"))
+	venueRepository := venue_postgres_repository.NewVenueRepository(pool)
+	venueService := venue_service.NewVenueService(venueRepository, s3Storage)
+	venueTransportHTTP := venue_transport_http.NewVenueHTTPHandler(venueService)
+	venueRoutes := venueTransportHTTP.Routes()
+	applyRouteAccessPolicy(venueRoutes, jwtManager)
 
 	allowedExt := map[string]bool{
 		".jpg":  true,
@@ -88,6 +105,7 @@ func main() {
 		".webp": true,
 		".gif":  true,
 	}
+	logger.Debug("initializing features", zap.String("features", "media"))
 	mediaService := media_service.NewMediaService(
 		s3Storage,
 		allowedExt,
@@ -96,12 +114,15 @@ func main() {
 	)
 	mediaTransportHTTP := media_transport_http.NewMediaHTTPHandler(mediaService)
 	mediaRoutes := mediaTransportHTTP.Routes()
+	applyRouteAccessPolicy(mediaRoutes, jwtManager)
 
 	apiVersionRouter := core_http_server.NewAPIVersionRouter(core_http_server.ApiVersion1)
-	apiVersionRouter.RigisterRoutes(usersRoutes...)
+
 	apiVersionRouter.RigisterRoutes(authRoutes...)
 	apiVersionRouter.RigisterRoutes(cityRoutes...)
 	apiVersionRouter.RigisterRoutes(mediaRoutes...)
+	apiVersionRouter.RigisterRoutes(artistRoutes...)
+	apiVersionRouter.RigisterRoutes(venueRoutes...)
 
 	httpConfig := core_http_server.NewConfigMust()
 

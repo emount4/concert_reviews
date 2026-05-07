@@ -8,7 +8,7 @@ import (
 	core_errors "github.com/emount4/concert_reviews/internal/core/errors"
 )
 
-func GetIntQueryParams(r *http.Request, key string) (*int, error) {
+func GetIntQueryParam(r *http.Request, key string) (*int, error) {
 	param := r.URL.Query().Get(key)
 	if param == "" {
 		return nil, nil
@@ -26,4 +26,24 @@ func GetIntQueryParams(r *http.Request, key string) (*int, error) {
 		)
 	}
 	return &val, nil
+}
+
+func GetStringQueryParam(r *http.Request, key string) *string {
+	param := r.URL.Query().Get(key)
+	return &param
+}
+
+func GetBoolQueryParam(r *http.Request, key string) *bool {
+	param := r.URL.Query().Get(key)
+
+	switch param {
+	case "true":
+		v := true
+		return &v
+	case "false":
+		v := false
+		return &v
+	default:
+		return nil
+	}
 }
