@@ -1,4 +1,3 @@
--- Задание: Откат миграции схемы БД (контент/социалка/статистика)
 
 -- Индексы
 DROP INDEX IF EXISTS idx_cities_slug;
@@ -8,8 +7,8 @@ DROP INDEX IF EXISTS idx_favorites_user;
 DROP INDEX IF EXISTS idx_venues_city;
 DROP INDEX IF EXISTS idx_concerts_date;
 DROP INDEX IF EXISTS idx_reviews_status;
+DROP INDEX IF EXISTS idx_reviews_user_concert_active;
 
--- Таблицы (в обратном порядке зависимостей)
 DROP TABLE IF EXISTS moderation_logs;
 DROP TABLE IF EXISTS user_stats;
 DROP TABLE IF EXISTS venue_stats;
@@ -28,3 +27,4 @@ DROP TABLE IF EXISTS venues;
 -- Типы
 DROP TYPE IF EXISTS content_status_enum;
 DROP TYPE IF EXISTS target_type_enum;
+

@@ -117,7 +117,7 @@ func (h *ArtistHTTPHandler) GetArtistsAdmin(rw http.ResponseWriter, r *http.Requ
 	// Маппинг → ответ
 	// Используем тот же MapDomainListToResponse, либо создаём отдельный для админки
 	// Если нужно показывать deleted_at — расширьте ArtistResponse или сделайте Admin-версию
-	response := MapDomainListToResponse(artists)
+	response := MapDomainListToAdminResponse(artists)
 
 	rw.Header().Set("Content-Type", "application/json")
 	responseHandler.JSONResponse(response, http.StatusOK)

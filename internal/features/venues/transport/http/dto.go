@@ -38,31 +38,41 @@ type CityBriefResponse struct {
 	Slug string `json:"slug"`
 }
 
+type VenueStatsResponse struct {
+	ReviewsCount   int    `json:"reviews_count"`
+	SumRatingTotal int64  `json:"sum_rating_total"`
+	ConcertsCount  int    `json:"concerts_count"`
+	FavoritesCount int    `json:"favorites_count"`
+	UpdatedAt      string `json:"updated_at"`
+}
+
 type VenueResponse struct {
-	ID          int               `json:"id"`
-	City        CityBriefResponse `json:"city"` // <-- вложенный объект
-	Name        string            `json:"name"`
-	Address     string            `json:"address,omitempty"`
-	Capacity    *int              `json:"capacity,omitempty"`
-	PhotoURL    string            `json:"photo_url,omitempty"`
-	Description string            `json:"description,omitempty"`
-	SocialLinks map[string]string `json:"social_links,omitempty"`
-	Status      string            `json:"status"`
-	CreatedAt   string            `json:"created_at"`
+	ID          int                `json:"id"`
+	City        CityBriefResponse  `json:"city"` // <-- вложенный объект
+	Name        string             `json:"name"`
+	Address     string             `json:"address,omitempty"`
+	Capacity    *int               `json:"capacity,omitempty"`
+	PhotoURL    string             `json:"photo_url,omitempty"`
+	Description string             `json:"description,omitempty"`
+	SocialLinks map[string]string  `json:"social_links,omitempty"`
+	Stats       VenueStatsResponse `json:"stats,omitempty"`
+	Status      string             `json:"status"`
+	CreatedAt   string             `json:"created_at"`
 }
 
 type VenueResponseAdmin struct {
-	ID          int               `json:"id"`
-	Name        string            `json:"name"`
-	City        CityBriefResponse `json:"city"`
-	Address     string            `json:"address,omitempty"`
-	Capacity    *int              `json:"capacity,omitempty"`
-	PhotoURL    string            `json:"photo_url,omitempty"`
-	Description string            `json:"description,omitempty"`
-	SocialLinks map[string]string `json:"social_links,omitempty"`
-	Status      string            `json:"status"`
-	CreatedAt   string            `json:"created_at"`
-	DeletedAt   string            `json:"deleted_at,omitempty"`
+	ID          int                `json:"id"`
+	Name        string             `json:"name"`
+	City        CityBriefResponse  `json:"city"`
+	Address     string             `json:"address,omitempty"`
+	Capacity    *int               `json:"capacity,omitempty"`
+	PhotoURL    string             `json:"photo_url,omitempty"`
+	Description string             `json:"description,omitempty"`
+	SocialLinks map[string]string  `json:"social_links,omitempty"`
+	Stats       VenueStatsResponse `json:"stats,omitempty"`
+	Status      string             `json:"status"`
+	CreatedAt   string             `json:"created_at"`
+	DeletedAt   string             `json:"deleted_at,omitempty"`
 }
 
 type ListVenuesResponse struct {
@@ -136,6 +146,16 @@ func MapDomainToVenueResponse(v domain.Venue) VenueResponse {
 		resp.SocialLinks = v.SocialLinks
 	}
 
+	if v.Stats != nil {
+		resp.Stats = VenueStatsResponse{
+			ReviewsCount:   v.Stats.ReviewsCount,
+			SumRatingTotal: v.Stats.SumRatingTotal,
+			ConcertsCount:  v.Stats.ConcertsCount,
+			FavoritesCount: v.Stats.FavoritesCount,
+			UpdatedAt:      v.Stats.UpdatedAt.Format(time.RFC3339),
+		}
+	}
+
 	return resp
 }
 
@@ -174,6 +194,16 @@ func MapDomainToVenueAdminResponse(v domain.Venue) VenueResponseAdmin {
 
 	if v.SocialLinks != nil {
 		resp.SocialLinks = v.SocialLinks
+	}
+
+	if v.Stats != nil {
+		resp.Stats = VenueStatsResponse{
+			ReviewsCount:   v.Stats.ReviewsCount,
+			SumRatingTotal: v.Stats.SumRatingTotal,
+			ConcertsCount:  v.Stats.ConcertsCount,
+			FavoritesCount: v.Stats.FavoritesCount,
+			UpdatedAt:      v.Stats.UpdatedAt.Format(time.RFC3339),
+		}
 	}
 
 	return resp

@@ -24,13 +24,14 @@ type UpdateArtistRequest struct {
 // --- Responses (DTO для выхода) ---
 
 type ArtistResponse struct {
-	ID          int               `json:"id"`
-	Name        string            `json:"name"`
-	Description string            `json:"description,omitempty"`
-	PhotoURL    string            `json:"photo_url,omitempty"`
-	SocialLinks map[string]string `json:"social_links,omitempty"`
-	Status      string            `json:"status"`
-	CreatedAt   string            `json:"created_at"`
+	ID          int                 `json:"id"`
+	Name        string              `json:"name"`
+	Description string              `json:"description,omitempty"`
+	PhotoURL    string              `json:"photo_url,omitempty"`
+	SocialLinks map[string]string   `json:"social_links,omitempty"`
+	Stats       ArtistStatsResponse `json:"stats,omitempty"`
+	Status      string              `json:"status"`
+	CreatedAt   string              `json:"created_at"`
 }
 
 type ListArtistsResponse struct {
@@ -69,6 +70,16 @@ func MapDomainToResponse(a domain.Artist) ArtistResponse {
 		CreatedAt: a.CreatedAt.Format(time.RFC3339),
 	}
 
+	if a.Stats != nil {
+		resp.Stats = ArtistStatsResponse{
+			ReviewsCount:   a.Stats.ReviewsCount,
+			SumRatingTotal: a.Stats.SumRatingTotal,
+			ConcertsCount:  a.Stats.ConcertsCount,
+			FavoritesCount: a.Stats.FavoritesCount,
+			UpdatedAt:      a.Stats.UpdatedAt.Format(time.RFC3339),
+		}
+	}
+
 	// Безопасно разыменовываем указатели
 	if a.Description != nil {
 		resp.Description = *a.Description
@@ -104,15 +115,24 @@ func MapPatchReqToDomain(req UpdateArtistRequest) domain.ArtistPatch {
 }
 
 type ArtistAdminResponse struct {
-	ID          int               `json:"id"`
-	Name        string            `json:"name"`
-	Description string            `json:"description,omitempty"`
-	PhotoURL    string            `json:"photo_url,omitempty"`
-	SocialLinks map[string]string `json:"social_links,omitempty"`
-	Status      string            `json:"status"`
-	CreatedAt   string            `json:"created_at"`
-	DeletedAt   *string           `json:"deleted_at,omitempty"` // показываем только в админке
-	IsDeleted   bool              `json:"is_deleted"`
+	ID          int                 `json:"id"`
+	Name        string              `json:"name"`
+	Description string              `json:"description,omitempty"`
+	PhotoURL    string              `json:"photo_url,omitempty"`
+	SocialLinks map[string]string   `json:"social_links,omitempty"`
+	Stats       ArtistStatsResponse `json:"stats,omitempty"`
+	Status      string              `json:"status"`
+	CreatedAt   string              `json:"created_at"`
+	DeletedAt   *string             `json:"deleted_at,omitempty"` // показываем только в админке
+	IsDeleted   bool                `json:"is_deleted"`
+}
+
+type ArtistStatsResponse struct {
+	ReviewsCount   int    `json:"reviews_count"`
+	SumRatingTotal int64  `json:"sum_rating_total"`
+	ConcertsCount  int    `json:"concerts_count"`
+	FavoritesCount int    `json:"favorites_count"`
+	UpdatedAt      string `json:"updated_at"`
 }
 
 type ListArtistsAdminResponse struct {
@@ -126,6 +146,15 @@ func MapDomainToAdminResponse(a domain.Artist) ArtistAdminResponse {
 		Status:    string(a.Status),
 		CreatedAt: a.CreatedAt.Format(time.RFC3339),
 		IsDeleted: a.DeletedAt != nil,
+	}
+	if a.Stats != nil {
+		resp.Stats = ArtistStatsResponse{
+			ReviewsCount:   a.Stats.ReviewsCount,
+			SumRatingTotal: a.Stats.SumRatingTotal,
+			ConcertsCount:  a.Stats.ConcertsCount,
+			FavoritesCount: a.Stats.FavoritesCount,
+			UpdatedAt:      a.Stats.UpdatedAt.Format(time.RFC3339),
+		}
 	}
 	if a.Description != nil {
 		resp.Description = *a.Description

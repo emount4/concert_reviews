@@ -6,6 +6,7 @@ import (
 
 	core_domain "github.com/emount4/concert_reviews/internal/core/domain"
 	core_http_server "github.com/emount4/concert_reviews/internal/core/transport/http/server"
+	"github.com/google/uuid"
 )
 
 type Service interface {
@@ -15,6 +16,7 @@ type Service interface {
 	Refresh(ctx context.Context, oldToken string) (core_domain.AuthResponse, error)
 
 	LinkTG(ctx context.Context, user core_domain.User, initData string) error
+	Link(ctx context.Context, id uuid.UUID, initData string) error
 	LoginTG(ctx context.Context, initData string) (core_domain.AuthResponse, error)
 }
 
@@ -51,7 +53,13 @@ func (h *AuthHTTPHandler) Routes() []core_http_server.Route {
 		{
 			Method:  http.MethodPost,
 			Path:    "/auth/logout",
-			Handler: http.HandlerFunc(h.Logout),
+			Handler: h.Logout,
+		},
+		{
+			Method:  http.MethodPost,
+			Path:    "/auth/tg-link",
+			Handler: h.Link,
+			Access:  core_http_server.AccessPublic,
 		},
 	}
 }

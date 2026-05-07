@@ -26,6 +26,7 @@ type Venue struct {
 	SocialLinks map[string]string
 	PhotoURL    *string
 	Description *string
+	Stats       *ContentStats
 	Status      ContentStatus
 	CreatedAt   time.Time
 	DeletedAt   *time.Time

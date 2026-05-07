@@ -144,7 +144,7 @@ CREATE TABLE IF NOT EXISTS review_likes (
 CREATE TABLE IF NOT EXISTS favorites (
     favorite_id SERIAL PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE RESTRICT,
-    target_id UUID NOT NULL,
+    target_id VARCHAR(64) NOT NULL,
     target_type target_type_enum NOT NULL,
     created_at TIMESTAMP DEFAULT NOW(),
     CONSTRAINT unq_favorites_user_target UNIQUE (user_id, target_id, target_type)
@@ -163,6 +163,7 @@ CREATE TABLE IF NOT EXISTS concert_stats (
     sum_p5 INTEGER DEFAULT 0 CHECK (sum_p5 >= 0),
     sum_rating_total BIGINT DEFAULT 0 CHECK (sum_rating_total >= 0),
     reviews_count INTEGER DEFAULT 0 CHECK (reviews_count >= 0),
+    favorites_count INTEGER,
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -170,14 +171,18 @@ CREATE TABLE IF NOT EXISTS artist_stats (
     artist_id INTEGER PRIMARY KEY REFERENCES artists(artist_id) ON DELETE CASCADE,
     sum_rating_total BIGINT DEFAULT 0 CHECK (sum_rating_total >= 0),
     reviews_count INTEGER DEFAULT 0 CHECK (reviews_count >= 0),
-    updated_at TIMESTAMP DEFAULT NOW()
+    updated_at TIMESTAMP DEFAULT NOW(),
+    concerts_count INTEGER,
+    favorites_count INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS venue_stats (
     venue_id INTEGER PRIMARY KEY REFERENCES venues(venue_id) ON DELETE CASCADE,
     sum_rating_total BIGINT DEFAULT 0 CHECK (sum_rating_total >= 0),
     reviews_count INTEGER DEFAULT 0 CHECK (reviews_count >= 0),
-    updated_at TIMESTAMP DEFAULT NOW()
+    updated_at TIMESTAMP DEFAULT NOW(),
+    concerts_count INTEGER,
+    favorites_count INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS user_stats (
@@ -197,11 +202,15 @@ CREATE TABLE IF NOT EXISTS moderation_logs (
     log_id SERIAL PRIMARY KEY,
     moderator_user_id UUID REFERENCES users(user_id) ON DELETE SET NULL,
     action VARCHAR(100) NOT NULL CHECK (action !~ '^\s*$'),
-    target_id UUID,
+    target_id TEXT,
     target_type target_type_enum,
     details JSONB,
     created_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_reviews_user_concert_active 
+ON reviews(user_id, concert_id) 
+WHERE status IN ('pending', 'approved') AND deleted_at IS NULL;
 
 -- Основные индексы для скорости
 CREATE INDEX IF NOT EXISTS idx_reviews_status ON reviews(status) WHERE status = 'approved';

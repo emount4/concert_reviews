@@ -25,7 +25,7 @@ func (h *ArtistHTTPHandler) GetArtists(rw http.ResponseWriter, r *http.Request) 
 	artistsDomains, err := h.artistService.GetArtists(ctx, *search, limit, offset)
 
 	if err != nil {
-		responseHandler.ErrorResponse(err, "failed to get cities")
+		responseHandler.ErrorResponse(err, "failed to get artists")
 		return
 	}
 

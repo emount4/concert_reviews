@@ -98,3 +98,7 @@ func (s *AuthService) getData(ctx context.Context, initData string) (initdata.In
 
 	return data, nil
 }
+
+func (s *AuthService) Link(ctx context.Context, id uuid.UUID, initData string) error {
+	return s.Link(ctx, id, initData)
+}

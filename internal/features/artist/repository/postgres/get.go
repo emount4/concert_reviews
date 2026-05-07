@@ -17,15 +17,24 @@ func (r *ArtistRepository) GetArtistByID(ctx context.Context, id int) (domain.Ar
 	defer cancel()
 
 	query := `
-		SELECT artist_id, name, description, photo_url, social_links, status, created_at, deleted_at
-		FROM artists
-		WHERE artist_id = $1 AND deleted_at IS NULL
+		SELECT a.artist_id, a.name, a.description, a.photo_url, a.social_links,
+		       COALESCE(s.reviews_count, 0) AS reviews_count,
+		       COALESCE(s.sum_rating_total, 0) AS sum_rating_total,
+		       COALESCE(s.concerts_count, 0) AS concerts_count,
+		       COALESCE(s.favorites_count, 0) AS favorites_count,
+		       COALESCE(s.updated_at, a.created_at) AS stats_updated_at,
+		       a.status, a.created_at, a.deleted_at
+		FROM artists a
+		LEFT JOIN artist_stats s ON a.artist_id = s.artist_id
+		WHERE a.artist_id = $1 AND a.deleted_at IS NULL
 	`
 
 	var rec ArtistRecord
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&rec.ArtistID, &rec.Name, &rec.Description, &rec.PhotoURL,
-		&rec.SocialLinks, &rec.Status, &rec.CreatedAt, &rec.DeletedAt,
+		&rec.SocialLinks, &rec.StatsReviewsCount, &rec.StatsSumRatingTotal,
+		&rec.StatsConcertsCount, &rec.StatsFavoritesCount, &rec.StatsUpdatedAt,
+		&rec.Status, &rec.CreatedAt, &rec.DeletedAt,
 	)
 
 	if err != nil {
@@ -45,24 +54,40 @@ func (r *ArtistRepository) GetArtists(ctx context.Context, search string, limit,
 
 	// Базовый запрос
 	query := `
-		SELECT artist_id, name, description, photo_url, social_links, status, created_at, deleted_at
-		FROM artists
-		WHERE deleted_at IS NULL
+		SELECT a.artist_id, a.name, a.description, a.photo_url, a.social_links,
+		       COALESCE(s.reviews_count, 0) AS reviews_count,
+		       COALESCE(s.sum_rating_total, 0) AS sum_rating_total,
+		       COALESCE(s.concerts_count, 0) AS concerts_count,
+		       COALESCE(s.favorites_count, 0) AS favorites_count,
+		       COALESCE(s.updated_at, a.created_at) AS stats_updated_at,
+		       a.status, a.created_at, a.deleted_at
+		FROM artists a
+		LEFT JOIN artist_stats s ON a.artist_id = s.artist_id
+		WHERE a.deleted_at IS NULL
 	`
 	args := []any{}
+	argIdx := 1
 
 	// Если есть поиск по имени
 	if search != "" {
-		query += ` AND name ILIKE $1`
+		query += fmt.Sprintf(" AND a.name ILIKE $%d", argIdx)
 		args = append(args, "%"+search+"%")
+		argIdx++
 	}
 
-	query += ` ORDER BY name ASC`
+	query += ` ORDER BY a.name ASC`
 
 	// Пагинация
-	argNum := len(args) + 1
-	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argNum, argNum+1)
-	args = append(args, limit, offset)
+	if limit != nil {
+		query += fmt.Sprintf(" LIMIT $%d", argIdx)
+		args = append(args, *limit)
+		argIdx++
+	}
+	if offset != nil {
+		query += fmt.Sprintf(" OFFSET $%d", argIdx)
+		args = append(args, *offset)
+		argIdx++
+	}
 
 	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
@@ -75,7 +100,9 @@ func (r *ArtistRepository) GetArtists(ctx context.Context, search string, limit,
 		var rec ArtistRecord
 		err := rows.Scan(
 			&rec.ArtistID, &rec.Name, &rec.Description, &rec.PhotoURL,
-			&rec.SocialLinks, &rec.Status, &rec.CreatedAt, &rec.DeletedAt,
+			&rec.SocialLinks, &rec.StatsReviewsCount, &rec.StatsSumRatingTotal,
+			&rec.StatsConcertsCount, &rec.StatsFavoritesCount, &rec.StatsUpdatedAt,
+			&rec.Status, &rec.CreatedAt, &rec.DeletedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan artist: %w", err)
@@ -104,8 +131,13 @@ func (r *ArtistRepository) GetArtistsAdmin(
 
 	// Базовый запрос
 	query := `
-		SELECT artist_id, name, description, photo_url, social_links, status, created_at, deleted_at
-		FROM artists
+		SELECT a.artist_id, a.name, a.description, a.photo_url, a.social_links,
+		       COALESCE(s.reviews_count, 0) AS reviews_count,
+		       COALESCE(s.sum_rating_total, 0) AS sum_rating_total,
+		       COALESCE(s.updated_at, a.created_at) AS stats_updated_at,
+		       a.status, a.created_at, a.deleted_at
+		FROM artists a
+		LEFT JOIN artist_stats s ON a.artist_id = s.artist_id
 		WHERE 1=1
 	`
 
@@ -114,22 +146,25 @@ func (r *ArtistRepository) GetArtistsAdmin(
 
 	// Фильтр по поиску (по имени, регистронезависимый)
 	if search != "" {
-		query += fmt.Sprintf(" AND name ILIKE $%d", argIdx)
+		query += fmt.Sprintf(" AND a.name ILIKE $%d", argIdx)
 		args = append(args, "%"+search+"%")
 		argIdx++
 	}
 
 	// Фильтр по статусу
 	if status != "" {
-		query += fmt.Sprintf(" AND status = $%d", argIdx)
+		query += fmt.Sprintf(" AND a.status = $%d", argIdx)
 		args = append(args, status)
 		argIdx++
 	}
 
 	// Фильтр по deleted_at
 	if !includeDeleted {
-		query += " AND deleted_at IS NULL"
+		query += " AND a.deleted_at IS NULL"
 	}
+
+	// Сортировка по умолчанию: новые сверху
+	query += " ORDER BY a.created_at DESC"
 
 	// Пагинация
 	if limit != nil {
@@ -143,9 +178,6 @@ func (r *ArtistRepository) GetArtistsAdmin(
 		argIdx++
 	}
 
-	// Сортировка по умолчанию: новые сверху
-	query += " ORDER BY created_at DESC"
-
 	rows, err := exec.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query artists admin: %w", err)
@@ -157,7 +189,9 @@ func (r *ArtistRepository) GetArtistsAdmin(
 		var record ArtistRecord
 		err := rows.Scan(
 			&record.ArtistID, &record.Name, &record.Description, &record.PhotoURL,
-			&record.SocialLinks, &record.Status, &record.CreatedAt, &record.DeletedAt,
+			&record.SocialLinks, &record.StatsReviewsCount, &record.StatsSumRatingTotal, &record.StatsUpdatedAt,
+			&record.StatsConcertsCount, &record.StatsFavoritesCount, &record.StatsUpdatedAt,
+			&record.Status, &record.CreatedAt, &record.DeletedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan artist row: %w", err)

@@ -8,14 +8,19 @@ import (
 
 // ArtistRecord — представление строки в таблице artists
 type ArtistRecord struct {
-	ArtistID    int               `db:"artist_id"`
-	Name        string            `db:"name"`
-	Description *string           `db:"description"`
-	PhotoURL    *string           `db:"photo_url"`
-	SocialLinks map[string]string `db:"social_links"`
-	Status      string            `db:"status"`
-	CreatedAt   time.Time         `db:"created_at"`
-	DeletedAt   *time.Time        `db:"deleted_at"`
+	ArtistID            int               `db:"artist_id"`
+	Name                string            `db:"name"`
+	Description         *string           `db:"description"`
+	PhotoURL            *string           `db:"photo_url"`
+	SocialLinks         map[string]string `db:"social_links"`
+	StatsReviewsCount   int               `db:"reviews_count"`
+	StatsSumRatingTotal int64             `db:"sum_rating_total"`
+	StatsUpdatedAt      time.Time         `db:"stats_updated_at"`
+	StatsConcertsCount  int               `db:"concerts_count"`
+	StatsFavoritesCount int               `db:"favorites_count"`
+	Status              string            `db:"status"`
+	CreatedAt           time.Time         `db:"created_at"`
+	DeletedAt           *time.Time        `db:"deleted_at"`
 }
 
 // MapRecordToDomain — конвертация из БД-модели в Домен
@@ -26,8 +31,15 @@ func (r ArtistRecord) MapToDomain() domain.Artist {
 		Description: r.Description,
 		PhotoURL:    r.PhotoURL,
 		SocialLinks: r.SocialLinks,
-		Status:      domain.ContentStatus(r.Status),
-		CreatedAt:   r.CreatedAt,
-		DeletedAt:   r.DeletedAt,
+		Stats: &domain.ContentStats{
+			ReviewsCount:   r.StatsReviewsCount,
+			ConcertsCount:  r.StatsConcertsCount,
+			FavoritesCount: r.StatsFavoritesCount,
+			SumRatingTotal: r.StatsSumRatingTotal,
+			UpdatedAt:      r.StatsUpdatedAt,
+		},
+		Status:    domain.ContentStatus(r.Status),
+		CreatedAt: r.CreatedAt,
+		DeletedAt: r.DeletedAt,
 	}
 }

@@ -17,16 +17,24 @@ func (r *VenueRepository) GetVenueByID(ctx context.Context, id int) (domain.Venu
 	defer cancel()
 
 	query := `
-		SELECT v.venue_id, v.city_id, c.name, c.slug, v.name, v.address, v.capacity, v.photo_url, v.description, v.social_links, v.status, v.created_at, v.deleted_at
+		SELECT v.venue_id, v.city_id, c.name, c.slug, v.name, v.address, v.capacity, v.social_links,
+		       COALESCE(vs.reviews_count, 0) AS reviews_count,
+		       COALESCE(vs.sum_rating_total, 0) AS sum_rating_total,
+		       COALESCE(vs.concerts_count, 0) AS concerts_count,
+		       COALESCE(vs.favorites_count, 0) AS favorites_count,
+		       COALESCE(vs.updated_at, v.created_at) AS stats_updated_at,
+		       v.photo_url, v.description, v.status, v.created_at, v.deleted_at
 		FROM venues v
 		LEFT JOIN cities c ON v.city_id = c.city_id
+		LEFT JOIN venue_stats vs ON v.venue_id = vs.venue_id
 		WHERE v.venue_id = $1 AND v.deleted_at IS NULL
 	`
 
 	var rec VenueRecord
 	err := r.pool.QueryRow(ctx, query, id).Scan(
-		&rec.VenueID, &rec.CityID, &rec.CityName, &rec.CitySlug, &rec.Name, &rec.Address, &rec.Capacity, &rec.PhotoURL,
-		&rec.Description, &rec.SocialLinks, &rec.Status, &rec.CreatedAt, &rec.DeletedAt,
+		&rec.VenueID, &rec.CityID, &rec.CityName, &rec.CitySlug, &rec.Name, &rec.Address, &rec.Capacity, &rec.SocialLinks,
+		&rec.StatsReviewsCount, &rec.StatsSumRatingTotal, &rec.StatsConcertsCount, &rec.StatsFavoritesCount, &rec.StatsUpdatedAt, &rec.PhotoURL,
+		&rec.Description, &rec.Status, &rec.CreatedAt, &rec.DeletedAt,
 	)
 
 	if err != nil {
@@ -56,9 +64,16 @@ func (r *VenueRepository) GetVenues(
 
 	// Базовый запрос (только активные)
 	query := `
-		SELECT v.venue_id, v.city_id, c.name, c.slug, v.name, v.address, v.capacity, v.photo_url, v.description, v.social_links, v.status, v.created_at, v.deleted_at
+		SELECT v.venue_id, v.city_id, c.name, c.slug, v.name, v.address, v.capacity, v.social_links,
+		       COALESCE(vs.reviews_count, 0) AS reviews_count,
+		       COALESCE(vs.sum_rating_total, 0) AS sum_rating_total,
+		       COALESCE(vs.concerts_count, 0) AS concerts_count,
+		       COALESCE(vs.favorites_count, 0) AS favorites_count,
+		       COALESCE(vs.updated_at, v.created_at) AS stats_updated_at,
+		       v.photo_url, v.description, v.status, v.created_at, v.deleted_at
 		FROM venues v
 		LEFT JOIN cities c ON v.city_id = c.city_id
+		LEFT JOIN venue_stats vs ON v.venue_id = vs.venue_id
 		WHERE v.deleted_at IS NULL
 	`
 	args := make([]any, 0)
@@ -103,8 +118,9 @@ func (r *VenueRepository) GetVenues(
 	for rows.Next() {
 		var rec VenueRecord
 		err := rows.Scan(
-			&rec.VenueID, &rec.CityID, &rec.CityName, &rec.CitySlug, &rec.Name, &rec.Address, &rec.Capacity, &rec.PhotoURL,
-			&rec.Description, &rec.SocialLinks, &rec.Status, &rec.CreatedAt, &rec.DeletedAt,
+			&rec.VenueID, &rec.CityID, &rec.CityName, &rec.CitySlug, &rec.Name, &rec.Address, &rec.Capacity, &rec.SocialLinks,
+			&rec.StatsReviewsCount, &rec.StatsSumRatingTotal, &rec.StatsConcertsCount, &rec.StatsFavoritesCount, &rec.StatsUpdatedAt, &rec.PhotoURL,
+			&rec.Description, &rec.Status, &rec.CreatedAt, &rec.DeletedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan venue: %w", err)
@@ -133,9 +149,16 @@ func (r *VenueRepository) GetVenuesAdmin(
 	}
 
 	query := `
-		SELECT v.venue_id, v.city_id, c.name, c.slug, v.name, v.address, v.capacity, v.photo_url, v.description, v.social_links, v.status, v.created_at, v.deleted_at
+		SELECT v.venue_id, v.city_id, c.name, c.slug, v.name, v.address, v.capacity, v.social_links,
+		       COALESCE(vs.reviews_count, 0) AS reviews_count,
+		       COALESCE(vs.sum_rating_total, 0) AS sum_rating_total,
+		       COALESCE(vs.concerts_count, 0) AS concerts_count,
+		       COALESCE(vs.favorites_count, 0) AS favorites_count,
+		       COALESCE(vs.updated_at, v.created_at) AS stats_updated_at,
+		       v.photo_url, v.description, v.status, v.created_at, v.deleted_at
 		FROM venues v
 		LEFT JOIN cities c ON v.city_id = c.city_id
+		LEFT JOIN venue_stats vs ON v.venue_id = vs.venue_id
 		WHERE 1=1
 	`
 	args := make([]any, 0)
@@ -192,8 +215,9 @@ func (r *VenueRepository) GetVenuesAdmin(
 	for rows.Next() {
 		var rec VenueRecord
 		err := rows.Scan(
-			&rec.VenueID, &rec.CityID, &rec.CityName, &rec.CitySlug, &rec.Name, &rec.Address, &rec.Capacity, &rec.PhotoURL,
-			&rec.Description, &rec.SocialLinks, &rec.Status, &rec.CreatedAt, &rec.DeletedAt,
+			&rec.VenueID, &rec.CityID, &rec.CityName, &rec.CitySlug, &rec.Name, &rec.Address, &rec.Capacity, &rec.SocialLinks,
+			&rec.StatsReviewsCount, &rec.StatsSumRatingTotal, &rec.StatsConcertsCount, &rec.StatsFavoritesCount, &rec.StatsUpdatedAt, &rec.PhotoURL,
+			&rec.Description, &rec.Status, &rec.CreatedAt, &rec.DeletedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan venue row: %w", err)
