@@ -13,10 +13,9 @@ type RefreshRequest struct {
 }
 
 type RefreshResponse struct {
-	UserID       string `json:"user_id"`
-	Username     string `json:"username"`
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	UserID      string `json:"user_id"`
+	Username    string `json:"username"`
+	AccessToken string `json:"access_token"`
 }
 
 func (h *AuthHTTPHandler) Refresh(
@@ -30,25 +29,38 @@ func (h *AuthHTTPHandler) Refresh(
 		rw,
 	)
 
-	var req RefreshRequest
-	if err := core_http_request.DecodeAndValidateRequest(r, &req); err != nil {
-		responseHandler.ErrorResponse(err, "failed to decode and validate http request")
+	refreshToken, err := refreshTokenFromRequest(r)
+	if err != nil {
+		responseHandler.ErrorResponse(err, "failed to get refresh token")
 		return
 	}
 
-	resp, err := h.authService.Refresh(ctx, req.RefreshToken)
+	resp, err := h.authService.Refresh(ctx, refreshToken)
 
 	if err != nil {
 		responseHandler.ErrorResponse(err, "failed to refresh token")
 		return
 	}
 
+	setRefreshTokenCookie(rw, r, resp.RefreshToken, resp.ExpiresAt)
 	rw.Header().Set("Content-Type", "application/json")
 	response := RefreshResponse{
-		UserID:       resp.User.ID.String(),
-		Username:     resp.User.Username,
-		AccessToken:  resp.AccessToken,
-		RefreshToken: resp.RefreshToken,
+		UserID:      resp.User.ID.String(),
+		Username:    resp.User.Username,
+		AccessToken: resp.AccessToken,
 	}
 	responseHandler.JSONResponse(response, http.StatusOK)
+}
+
+func refreshTokenFromRequest(r *http.Request) (string, error) {
+	if cookie, err := r.Cookie(refreshTokenCookieName); err == nil && cookie.Value != "" {
+		return cookie.Value, nil
+	}
+
+	var req RefreshRequest
+	if err := core_http_request.DecodeAndValidateRequest(r, &req); err != nil {
+		return "", err
+	}
+
+	return req.RefreshToken, nil
 }

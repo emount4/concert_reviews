@@ -23,6 +23,9 @@ import (
 	city_postgres_repository "github.com/emount4/concert_reviews/internal/features/city/repository/postgres"
 	city_service "github.com/emount4/concert_reviews/internal/features/city/service"
 	city_transport_http "github.com/emount4/concert_reviews/internal/features/city/transport/http"
+	concert_postgres_repository "github.com/emount4/concert_reviews/internal/features/concert/repository/postgres"
+	concert_service "github.com/emount4/concert_reviews/internal/features/concert/service"
+	concert_transport_http "github.com/emount4/concert_reviews/internal/features/concert/transport/http"
 	venue_postgres_repository "github.com/emount4/concert_reviews/internal/features/venues/repository/postgres"
 	venue_service "github.com/emount4/concert_reviews/internal/features/venues/service"
 	venue_transport_http "github.com/emount4/concert_reviews/internal/features/venues/transport/http"
@@ -98,6 +101,13 @@ func main() {
 	venueRoutes := venueTransportHTTP.Routes()
 	applyRouteAccessPolicy(venueRoutes, jwtManager)
 
+	logger.Debug("initializing features", zap.String("features", "concerts"))
+	concertRepository := concert_postgres_repository.NewConcertRepository(pool, txManager)
+	concertService := concert_service.NewConcertService(concertRepository, s3Storage)
+	concertTransportHTTP := concert_transport_http.NewConcertHTTPHandler(concertService)
+	concertRoutes := concertTransportHTTP.Routes()
+	applyRouteAccessPolicy(concertRoutes, jwtManager)
+
 	allowedExt := map[string]bool{
 		".jpg":  true,
 		".jpeg": true,
@@ -123,6 +133,7 @@ func main() {
 	apiVersionRouter.RigisterRoutes(mediaRoutes...)
 	apiVersionRouter.RigisterRoutes(artistRoutes...)
 	apiVersionRouter.RigisterRoutes(venueRoutes...)
+	apiVersionRouter.RigisterRoutes(concertRoutes...)
 
 	httpConfig := core_http_server.NewConfigMust()
 
@@ -161,6 +172,11 @@ func applyRouteAccessPolicy(routes []core_http_server.Route, jwtManager auth_ser
 				routes[i].Middleware,
 				core_http_middleware.Auth(jwtManager),
 				core_http_middleware.SuperAdminOnly(),
+			)
+		case core_http_server.AccessAuthOnly:
+			routes[i].Middleware = append(
+				routes[i].Middleware,
+				core_http_middleware.Auth(jwtManager),
 			)
 		}
 	}

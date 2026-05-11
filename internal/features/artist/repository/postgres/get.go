@@ -110,6 +110,9 @@ func (r *ArtistRepository) GetArtists(ctx context.Context, search string, limit,
 		artists = append(artists, rec.MapToDomain())
 	}
 
+	if artists == nil {
+		artists = []domain.Artist{}
+	}
 	return artists, nil
 }
 
@@ -134,6 +137,8 @@ func (r *ArtistRepository) GetArtistsAdmin(
 		SELECT a.artist_id, a.name, a.description, a.photo_url, a.social_links,
 		       COALESCE(s.reviews_count, 0) AS reviews_count,
 		       COALESCE(s.sum_rating_total, 0) AS sum_rating_total,
+		       COALESCE(s.concerts_count, 0) AS concerts_count,
+		       COALESCE(s.favorites_count, 0) AS favorites_count,
 		       COALESCE(s.updated_at, a.created_at) AS stats_updated_at,
 		       a.status, a.created_at, a.deleted_at
 		FROM artists a
@@ -189,7 +194,7 @@ func (r *ArtistRepository) GetArtistsAdmin(
 		var record ArtistRecord
 		err := rows.Scan(
 			&record.ArtistID, &record.Name, &record.Description, &record.PhotoURL,
-			&record.SocialLinks, &record.StatsReviewsCount, &record.StatsSumRatingTotal, &record.StatsUpdatedAt,
+			&record.SocialLinks, &record.StatsReviewsCount, &record.StatsSumRatingTotal,
 			&record.StatsConcertsCount, &record.StatsFavoritesCount, &record.StatsUpdatedAt,
 			&record.Status, &record.CreatedAt, &record.DeletedAt,
 		)
@@ -199,5 +204,8 @@ func (r *ArtistRepository) GetArtistsAdmin(
 		artists = append(artists, record.MapToDomain())
 	}
 
+	if artists == nil {
+		artists = []domain.Artist{}
+	}
 	return artists, nil
 }

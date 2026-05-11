@@ -59,7 +59,7 @@ func (h *AuthHTTPHandler) Routes() []core_http_server.Route {
 			Method:  http.MethodPost,
 			Path:    "/auth/tg-link",
 			Handler: h.Link,
-			Access:  core_http_server.AccessPublic,
+			Access:  core_http_server.AccessAuthOnly,
 		},
 	}
 }

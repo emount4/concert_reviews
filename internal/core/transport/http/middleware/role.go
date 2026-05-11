@@ -2,6 +2,21 @@ package core_http_middleware
 
 import "net/http"
 
+func AuthOnly() Middleware {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			roleID, ok := r.Context().Value(RoleIDKey).(int)
+
+			if !ok || roleID < 1 {
+				writeJSONError(w, http.StatusForbidden, "forbidden: auth rights required")
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 func AdminOnly() Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

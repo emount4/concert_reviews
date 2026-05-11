@@ -10,6 +10,7 @@ type AccessLevel int
 
 const (
 	AccessPublic AccessLevel = iota
+	AccessAuthOnly
 	AccessAdminOnly
 	AccessSuperAdminOnly
 )

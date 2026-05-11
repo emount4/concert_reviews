@@ -15,10 +15,9 @@ type TGLoginRequest struct {
 }
 
 type TGLoginResponse struct {
-	UserID       string `json:"user_id"`
-	Username     string `json:"username"`
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	UserID      string `json:"user_id"`
+	Username    string `json:"username"`
+	AccessToken string `json:"access_token"`
 }
 
 func (h *AuthHTTPHandler) LoginTG(rw http.ResponseWriter, r *http.Request) {
@@ -38,6 +37,7 @@ func (h *AuthHTTPHandler) LoginTG(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	setRefreshTokenCookie(rw, r, authResponse.RefreshToken, authResponse.ExpiresAt)
 	rw.Header().Set("Content-Type", "application/json")
 	response := tgLoginDtoFromDomain(authResponse)
 	responseHandler.JSONResponse(response, http.StatusOK)
@@ -70,9 +70,8 @@ func (h *AuthHTTPHandler) Link(rw http.ResponseWriter, r *http.Request) {
 
 func tgLoginDtoFromDomain(response core_domain.AuthResponse) TGLoginResponse {
 	return TGLoginResponse{
-		UserID:       response.User.ID.String(),
-		Username:     response.User.Username,
-		AccessToken:  response.AccessToken,
-		RefreshToken: response.RefreshToken,
+		UserID:      response.User.ID.String(),
+		Username:    response.User.Username,
+		AccessToken: response.AccessToken,
 	}
 }

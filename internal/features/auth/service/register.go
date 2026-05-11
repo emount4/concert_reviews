@@ -39,7 +39,7 @@ func (s *AuthService) Register(ctx context.Context, user core_domain.User, passw
 			return err
 		}
 
-		generated, err := s.jwt.Generate(createdUser.ID, createdUser.RoleID, s.config.AccessTokenTTL)
+		generated, err := s.jwt.Generate(createdUser.ID, createdUser.RoleID, s.config.AccessTokenTTL, s.config.RefreshTokenTTL)
 		if err != nil {
 			return fmt.Errorf("generate tokens: %w", err)
 		}
