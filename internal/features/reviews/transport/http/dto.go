@@ -1,10 +1,10 @@
 package review_transport_http
 
 import (
-	"time"
-
 	"github.com/google/uuid"
 )
+
+// --- Requests ---
 
 type CreateReviewRequest struct {
 	ConcertID uuid.UUID `json:"concert_id" validate:"required"`
@@ -18,10 +18,14 @@ type CreateReviewRequest struct {
 	MediaKeys []string  `json:"media_keys" validate:"omitempty,max=10"`
 }
 
-type ApproveReviewRequest struct {
-	FinalText       string      `json:"final_text" validate:"required"`
-	AllowedMediaIDs []uuid.UUID `json:"allowed_media_ids"`
+// --- Responses ---
+
+type AuthorBriefResponse struct {
+	ID        uuid.UUID `json:"id"`
+	Username  string    `json:"username"`
+	AvatarURL *string   `json:"avatar_url,omitempty"`
 }
+
 type ReviewMediaResponse struct {
 	MediaID   uuid.UUID `json:"media_id"`
 	ReviewID  uuid.UUID `json:"review_id"`
@@ -29,7 +33,7 @@ type ReviewMediaResponse struct {
 	MediaType string    `json:"media_type"`
 	FileSize  *int64    `json:"file_size"`
 	Status    string    `json:"status"`
-	CreatedAt time.Time `json:"created_at"`
+	CreatedAt string    `json:"created_at"`
 }
 
 type ReviewResponse struct {
@@ -49,11 +53,11 @@ type ReviewResponse struct {
 	RejectionReason   *string    `json:"rejection_reason"`
 	ModeratedByUserID *uuid.UUID `json:"moderated_by_user_id"`
 	IsVisible         bool       `json:"is_visible"`
-	CreatedAt         time.Time  `json:"created_at"`
-	DeletedAt         *time.Time `json:"deleted_at"`
+	CreatedAt         string     `json:"created_at"`
+	DeletedAt         *string    `json:"deleted_at,omitempty"`
 
-	AuthorName   string                `json:"author_name,omitempty"`
-	AuthorAvatar *string               `json:"author_avatar_url,omitempty"`
+	// Обогащение для фронта (Author и Media)
+	Author       AuthorBriefResponse   `json:"author"`
 	ConcertTitle string                `json:"concert_title,omitempty"`
 	Media        []ReviewMediaResponse `json:"media,omitempty"`
 	LikesCount   int                   `json:"likes_count"`
@@ -62,4 +66,11 @@ type ReviewResponse struct {
 
 type ListReviewsResponse struct {
 	Items []ReviewResponse `json:"items"`
+}
+
+// Response для эндпоинта /likers
+type LikerResponse struct {
+	ID        uuid.UUID `json:"id"`
+	Username  string    `json:"username"`
+	AvatarURL *string   `json:"avatar_url,omitempty"`
 }

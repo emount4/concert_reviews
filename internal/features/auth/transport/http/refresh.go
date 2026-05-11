@@ -1,10 +1,11 @@
 package auth_transport_http
 
 import (
+	"fmt"
 	"net/http"
 
+	core_errors "github.com/emount4/concert_reviews/internal/core/errors"
 	core_logger "github.com/emount4/concert_reviews/internal/core/logger"
-	core_http_request "github.com/emount4/concert_reviews/internal/core/transport/http/request"
 	core_http_response "github.com/emount4/concert_reviews/internal/core/transport/http/response"
 )
 
@@ -56,11 +57,11 @@ func refreshTokenFromRequest(r *http.Request) (string, error) {
 	if cookie, err := r.Cookie(refreshTokenCookieName); err == nil && cookie.Value != "" {
 		return cookie.Value, nil
 	}
+	return "", fmt.Errorf("invalid coockie: %w", core_errors.ErrUnauthorized)
+	// var req RefreshRequest
+	// if err := core_http_request.DecodeAndValidateRequest(r, &req); err != nil {
+	// 	return "", err
+	// }
 
-	var req RefreshRequest
-	if err := core_http_request.DecodeAndValidateRequest(r, &req); err != nil {
-		return "", err
-	}
-
-	return req.RefreshToken, nil
+	// return req.RefreshToken, nil
 }
