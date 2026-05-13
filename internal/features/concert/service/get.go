@@ -14,26 +14,28 @@ func (s *ConcertService) GetConcerts(
 	cityID *int,
 	artistID *int,
 	search string,
+	sort string,
+	direction string,
 	limit, offset *int,
-) ([]domain.Concert, error) {
+) ([]domain.Concert, int, error) {
 	if s.concertRepository == nil {
-		return nil, core_errors.ErrRepositoryNotConfigured
+		return nil, 0, core_errors.ErrRepositoryNotConfigured
 	}
 
 	if cityID != nil && *cityID <= 0 {
-		return nil, fmt.Errorf("invalid city_id: %w", core_errors.ErrInvalidArgument)
+		return nil, 0, fmt.Errorf("invalid city_id: %w", core_errors.ErrInvalidArgument)
 	}
 	if artistID != nil && *artistID <= 0 {
-		return nil, fmt.Errorf("invalid artist_id: %w", core_errors.ErrInvalidArgument)
+		return nil, 0, fmt.Errorf("invalid artist_id: %w", core_errors.ErrInvalidArgument)
 	}
 	if limit != nil && *limit < 0 {
-		return nil, fmt.Errorf("limit must be non-negative: %w", core_errors.ErrInvalidArgument)
+		return nil, 0, fmt.Errorf("limit must be non-negative: %w", core_errors.ErrInvalidArgument)
 	}
 	if offset != nil && *offset < 0 {
-		return nil, fmt.Errorf("offset must be non-negative: %w", core_errors.ErrInvalidArgument)
+		return nil, 0, fmt.Errorf("offset must be non-negative: %w", core_errors.ErrInvalidArgument)
 	}
 
-	return s.concertRepository.GetConcerts(ctx, cityID, artistID, search, limit, offset)
+	return s.concertRepository.GetConcerts(ctx, cityID, artistID, search, sort, direction, limit, offset)
 }
 
 func (s *ConcertService) GetConcertByID(ctx context.Context, id uuid.UUID) (domain.Concert, error) {
@@ -54,17 +56,19 @@ func (s *ConcertService) GetConcertsAdmin(
 	cityID *int,
 	artistID *int,
 	search string,
+	sort string,
+	direction string,
 	limit, offset *int,
 	includeDeleted bool,
-) ([]domain.Concert, error) {
+) ([]domain.Concert, int, error) {
 	if limit != nil && *limit < 0 {
-		return nil, fmt.Errorf("limit must be non-negative: %w", core_errors.ErrInvalidArgument)
+		return nil, 0, fmt.Errorf("limit must be non-negative: %w", core_errors.ErrInvalidArgument)
 	}
 	if offset != nil && *offset < 0 {
-		return nil, fmt.Errorf("offset must be non-negative: %w", core_errors.ErrInvalidArgument)
+		return nil, 0, fmt.Errorf("offset must be non-negative: %w", core_errors.ErrInvalidArgument)
 	}
 
-	return s.concertRepository.GetConcertsAdmin(ctx, cityID, artistID, search, limit, offset, includeDeleted)
+	return s.concertRepository.GetConcertsAdmin(ctx, cityID, artistID, search, sort, direction, limit, offset, includeDeleted)
 }
 
 func (s *ConcertService) GetSuggestionsAdmin(ctx context.Context, limit, offset *int, status string) ([]domain.ConcertSuggestion, error) {

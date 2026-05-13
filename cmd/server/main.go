@@ -10,6 +10,7 @@ import (
 	core_logger "github.com/emount4/concert_reviews/internal/core/logger"
 	core_postgres_pool "github.com/emount4/concert_reviews/internal/core/repository/postgres/pool"
 	core_postgres_tx "github.com/emount4/concert_reviews/internal/core/repository/postgres/tx"
+	core_redis "github.com/emount4/concert_reviews/internal/core/repository/redis"
 
 	core_s3 "github.com/emount4/concert_reviews/internal/core/repository/s3"
 	core_http_middleware "github.com/emount4/concert_reviews/internal/core/transport/http/middleware"
@@ -26,6 +27,14 @@ import (
 	concert_postgres_repository "github.com/emount4/concert_reviews/internal/features/concert/repository/postgres"
 	concert_service "github.com/emount4/concert_reviews/internal/features/concert/service"
 	concert_transport_http "github.com/emount4/concert_reviews/internal/features/concert/transport/http"
+	review_postgres_repository "github.com/emount4/concert_reviews/internal/features/reviews/repository/postgres"
+	review_redis_repository "github.com/emount4/concert_reviews/internal/features/reviews/repository/redis"
+	review_service "github.com/emount4/concert_reviews/internal/features/reviews/service"
+	review_transport_http "github.com/emount4/concert_reviews/internal/features/reviews/transport/http"
+	stats_postgres_repository "github.com/emount4/concert_reviews/internal/features/stats/repository/postgres"
+	stats_redis_repository "github.com/emount4/concert_reviews/internal/features/stats/repository/redis"
+	stats_service "github.com/emount4/concert_reviews/internal/features/stats/service"
+	stats_transport_http "github.com/emount4/concert_reviews/internal/features/stats/transport/http"
 	venue_postgres_repository "github.com/emount4/concert_reviews/internal/features/venues/repository/postgres"
 	venue_service "github.com/emount4/concert_reviews/internal/features/venues/service"
 	venue_transport_http "github.com/emount4/concert_reviews/internal/features/venues/transport/http"
@@ -65,10 +74,18 @@ func main() {
 
 	txManager := core_postgres_tx.NewManager(pool)
 
+	logger.Debug("initializing s3")
 	s3Config := core_s3.NewConfigMust()
 	s3Storage, err := core_s3.NewS3Storage(logger, s3Config)
 	if err != nil {
 		logger.Fatal("failed to init s3 storage", zap.Error(err))
+	}
+
+	logger.Debug("initializing redis")
+	redisConfig := core_redis.NewConfigMust()
+	redis, err := core_redis.NewClient(ctx, redisConfig)
+	if err != nil {
+		logger.Fatal("failed to init redis storage", zap.Error(err))
 	}
 
 	logger.Debug("initializing features", zap.String("features", "auth"))
@@ -79,6 +96,13 @@ func main() {
 	authService := auth_service.NewAuthService(authRepository, txManager, authConfig, hasher, jwtManager)
 	authTransportHTTP := auth_transport_http.NewAuthHTTPHandler(authService)
 	authRoutes := authTransportHTTP.Routes()
+
+	logger.Debug("initializing features", zap.String("features", "stats"))
+	statsRepository := stats_postgres_repository.NewStatsRepository(pool, txManager)
+	statsRedisRepository := stats_redis_repository.NewStatsRedisRepository(redis)
+	statsService := stats_service.NewStatsService(statsRepository, statsRedisRepository)
+	statsTransportHTTP := stats_transport_http.NewStatsHTTPHandler(statsService)
+	statsRoutes := statsTransportHTTP.Routes()
 
 	logger.Debug("initializing features", zap.String("features", "artist"))
 	artistRepository := artist_postgres_repository.NewArtistRepository(pool)
@@ -108,6 +132,14 @@ func main() {
 	concertRoutes := concertTransportHTTP.Routes()
 	applyRouteAccessPolicy(concertRoutes, jwtManager)
 
+	logger.Debug("initializing features", zap.String("features", "reviews"))
+	reviewRepository := review_postgres_repository.NewReviewRepository(pool, txManager)
+	reviewRedis := review_redis_repository.NewReviewRedisRepository(redis)
+	reviewService := review_service.NewReviewService(reviewRepository, s3Storage, reviewRedis)
+	reviewHTTPHandler := review_transport_http.NewReviewHTTPHandler(reviewService)
+	reviewRoutes := reviewHTTPHandler.Routes()
+	applyRouteAccessPolicy(reviewRoutes, jwtManager)
+
 	allowedExt := map[string]bool{
 		".jpg":  true,
 		".jpeg": true,
@@ -129,11 +161,13 @@ func main() {
 	apiVersionRouter := core_http_server.NewAPIVersionRouter(core_http_server.ApiVersion1)
 
 	apiVersionRouter.RigisterRoutes(authRoutes...)
+	apiVersionRouter.RigisterRoutes(statsRoutes...)
 	apiVersionRouter.RigisterRoutes(cityRoutes...)
 	apiVersionRouter.RigisterRoutes(mediaRoutes...)
 	apiVersionRouter.RigisterRoutes(artistRoutes...)
 	apiVersionRouter.RigisterRoutes(venueRoutes...)
 	apiVersionRouter.RigisterRoutes(concertRoutes...)
+	apiVersionRouter.RigisterRoutes(reviewRoutes...)
 
 	httpConfig := core_http_server.NewConfigMust()
 

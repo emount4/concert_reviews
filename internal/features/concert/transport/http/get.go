@@ -9,6 +9,24 @@ import (
 	"github.com/google/uuid"
 )
 
+func defaultConcertDirection(sort string) string {
+	switch sort {
+	case "title":
+		return "ASC"
+	default:
+		return "DESC"
+	}
+}
+
+func allowedConcertSort(sort string) bool {
+	switch sort {
+	case "date", "rating", "reviews", "title", "p1", "p2", "p3", "p4", "p5":
+		return true
+	default:
+		return false
+	}
+}
+
 // GetConcerts — Получение публичного списка концертов с фильтрами
 func (h *ConcertHTTPHandler) GetConcerts(rw http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -21,17 +39,27 @@ func (h *ConcertHTTPHandler) GetConcerts(rw http.ResponseWriter, r *http.Request
 		return
 	}
 
+	sort, direction, directionProvided := core_http_request.GetSortParamsDetailed(r, "date", "DESC")
+	if !allowedConcertSort(sort) {
+		sort = "date"
+	}
+	if !directionProvided {
+		direction = defaultConcertDirection(sort)
+	}
+
 	cityID, _ := core_http_request.GetIntQueryParam(r, "city_id")
 	artistID, _ := core_http_request.GetIntQueryParam(r, "artist_id")
 	search := r.URL.Query().Get("search")
 
-	concerts, err := h.concertService.GetConcerts(ctx, cityID, artistID, search, limit, offset)
+	concerts, total, err := h.concertService.GetConcerts(ctx, cityID, artistID, search, sort, direction, limit, offset)
 	if err != nil {
 		responseHandler.ErrorResponse(err, "failed to get concerts")
 		return
 	}
 
-	responseHandler.JSONResponse(MapDomainListToConcertResponse(concerts), http.StatusOK)
+	response := MapDomainListToConcertResponse(concerts)
+	response.PageCount = core_http_request.GetPageCount(total, limit)
+	responseHandler.JSONResponse(response, http.StatusOK)
 }
 
 func (h *ConcertHTTPHandler) GetConcert(rw http.ResponseWriter, r *http.Request) {
@@ -65,7 +93,19 @@ func (h *ConcertHTTPHandler) GetConcertsAdmin(rw http.ResponseWriter, r *http.Re
 	log := core_logger.FromContext(ctx)
 	responseHandler := core_http_response.NewHTTPResponseHandler(log, rw)
 
-	limit, offset, _ := core_http_request.GetLimitOffsetByQueryParam(r)
+	limit, offset, err := core_http_request.GetLimitOffsetByQueryParam(r)
+	if err != nil {
+		responseHandler.ErrorResponse(err, "failed to get limit/offset")
+		return
+	}
+
+	sort, direction, directionProvided := core_http_request.GetSortParamsDetailed(r, "date", "DESC")
+	if !allowedConcertSort(sort) {
+		sort = "date"
+	}
+	if !directionProvided {
+		direction = defaultConcertDirection(sort)
+	}
 	cityID, _ := core_http_request.GetIntQueryParam(r, "city_id")
 	artistID, _ := core_http_request.GetIntQueryParam(r, "artist_id")
 	search := r.URL.Query().Get("search")
@@ -74,14 +114,15 @@ func (h *ConcertHTTPHandler) GetConcertsAdmin(rw http.ResponseWriter, r *http.Re
 		includeDeleted = *value
 	}
 
-	concerts, err := h.concertService.GetConcertsAdmin(ctx, cityID, artistID, search, limit, offset, includeDeleted)
+	concerts, total, err := h.concertService.GetConcertsAdmin(ctx, cityID, artistID, search, sort, direction, limit, offset, includeDeleted)
 	if err != nil {
 		responseHandler.ErrorResponse(err, "failed to fetch admin concerts list")
 		return
 	}
 
-	// Используем тот же маппер, так как структура ответа совпадает (или используй AdminResponse если нужно больше полей)
-	responseHandler.JSONResponse(MapDomainListToConcertAdminResponse(concerts), http.StatusOK)
+	response := MapDomainListToConcertAdminResponse(concerts)
+	response.PageCount = core_http_request.GetPageCount(total, limit)
+	responseHandler.JSONResponse(response, http.StatusOK)
 }
 
 func (h *ConcertHTTPHandler) GetSuggestionsAdmin(rw http.ResponseWriter, r *http.Request) {

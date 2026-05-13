@@ -37,12 +37,12 @@ type ReviewMediaResponse struct {
 }
 
 type ReviewResponse struct {
-	ReviewID          uuid.UUID  `json:"review_id"`
-	UserID            uuid.UUID  `json:"user_id"`
-	ConcertID         uuid.UUID  `json:"concert_id"`
-	Title             string     `json:"title"`
-	Text              string     `json:"text"`
-	OriginalText      *string    `json:"original_text"`
+	ReviewID  uuid.UUID `json:"review_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	ConcertID uuid.UUID `json:"concert_id"`
+	Title     string    `json:"title"`
+	Text      string    `json:"text"`
+	// OriginalText      *string    `json:"original_text"`
 	P1                int        `json:"p1"`
 	P2                int        `json:"p2"`
 	P3                int        `json:"p3"`
@@ -65,7 +65,8 @@ type ReviewResponse struct {
 }
 
 type ListReviewsResponse struct {
-	Items []ReviewResponse `json:"items"`
+	Items     []ReviewResponse `json:"items"`
+	PageCount int              `json:"page_count"`
 }
 
 // Response для эндпоинта /likers
@@ -73,4 +74,10 @@ type LikerResponse struct {
 	ID        uuid.UUID `json:"id"`
 	Username  string    `json:"username"`
 	AvatarURL *string   `json:"avatar_url,omitempty"`
+}
+
+type ApproveReviewRequest struct {
+	FinalTitle      string      `json:"final_title" validate:"required,max=255"`
+	FinalText       string      `json:"final_text" validate:"required,min=100,max=8000"`
+	AllowedMediaIDs []uuid.UUID `json:"allowed_media_ids"`
 }

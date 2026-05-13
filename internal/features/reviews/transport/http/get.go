@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	core_logger "github.com/emount4/concert_reviews/internal/core/logger"
+	core_http_middleware "github.com/emount4/concert_reviews/internal/core/transport/http/middleware"
 	core_http_request "github.com/emount4/concert_reviews/internal/core/transport/http/request"
 	core_http_response "github.com/emount4/concert_reviews/internal/core/transport/http/response"
 	"github.com/google/uuid"
@@ -13,11 +14,11 @@ import (
 func (h *ReviewHTTPHandler) GetReviews(rw http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := core_logger.FromContext(ctx)
-	res := core_http_response.NewHTTPResponseHandler(log, rw)
+	responseHandler := core_http_response.NewHTTPResponseHandler(log, rw)
 
 	limit, offset, err := core_http_request.GetLimitOffsetByQueryParam(r)
 	if err != nil {
-		res.ErrorResponse(err, "failed to get limit/offset")
+		responseHandler.ErrorResponse(err, "failed to get limit/offset")
 		return
 	}
 
@@ -25,6 +26,7 @@ func (h *ReviewHTTPHandler) GetReviews(rw http.ResponseWriter, r *http.Request) 
 	allowedSortFields := map[string]bool{
 		"date":   true, // -> created_at
 		"rating": true, // -> rating_total
+		"count":  true, // -> likes_count
 		"likes":  true, // -> likes_count
 	}
 
@@ -40,16 +42,29 @@ func (h *ReviewHTTPHandler) GetReviews(rw http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	artistID, _ := core_http_request.GetIntQueryParam(r, "artist_id")
-
-	reviews, err := h.reviewService.GetReviews(ctx, concertIDPtr, artistID, sort, direction, limit, offset)
+	artistID, err := core_http_request.GetIntQueryParam(r, "artist_id")
 	if err != nil {
-		res.ErrorResponse(err, "failed to fetch reviews")
+		responseHandler.ErrorResponse(err, "invalid artist id")
+		return
+	}
+	venueID, err := core_http_request.GetIntQueryParam(r, "venue_id")
+	if err != nil {
+		responseHandler.ErrorResponse(err, "invalid venue id")
 		return
 	}
 
-	// 5. Маппинг и Ответ
-	res.JSONResponse(MapDomainListToReviewResponse(reviews), http.StatusOK)
+	// Получаем текущего пользователя для is_liked_by_me (может быть nil если не авторизован)
+	userID, _ := core_http_middleware.GetUserID(ctx)
+
+	reviews, total, err := h.reviewService.GetReviews(ctx, &userID, concertIDPtr, artistID, venueID, sort, direction, limit, offset)
+	if err != nil {
+		responseHandler.ErrorResponse(err, "failed to fetch reviews")
+		return
+	}
+
+	response := MapDomainListToReviewResponse(reviews)
+	response.PageCount = core_http_request.GetPageCount(total, limit)
+	responseHandler.JSONResponse(response, http.StatusOK)
 }
 
 // GetReview — Детальная информация об одной рецензии
@@ -85,13 +100,15 @@ func (h *ReviewHTTPHandler) GetPendingReviews(rw http.ResponseWriter, r *http.Re
 
 	limit, offset, _ := core_http_request.GetLimitOffsetByQueryParam(r)
 
-	reviews, err := h.reviewService.GetPendingReviews(ctx, limit, offset)
+	reviews, total, err := h.reviewService.GetPendingReviews(ctx, limit, offset)
 	if err != nil {
 		res.ErrorResponse(err, "failed to fetch pending queue")
 		return
 	}
 
-	res.JSONResponse(MapDomainListToReviewResponse(reviews), http.StatusOK)
+	resp := MapDomainListToReviewResponse(reviews)
+	resp.PageCount = core_http_request.GetPageCount(total, limit)
+	res.JSONResponse(resp, http.StatusOK)
 }
 
 // GetLikers — Список пользователей, лайкнувших рецензию

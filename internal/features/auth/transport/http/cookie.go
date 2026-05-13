@@ -16,12 +16,12 @@ func setRefreshTokenCookie(rw http.ResponseWriter, r *http.Request, token string
 	http.SetCookie(rw, &http.Cookie{
 		Name:     refreshTokenCookieName,
 		Value:    token,
-		Path:     "/api/v1/auth",
+		Path:     "/",
 		Expires:  expiresAt.UTC(),
 		MaxAge:   maxAge,
 		HttpOnly: true,
-		Secure:   r.TLS != nil,
-		SameSite: http.SameSiteLaxMode,
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
 	})
 }
 
@@ -29,11 +29,11 @@ func clearRefreshTokenCookie(rw http.ResponseWriter, r *http.Request) {
 	http.SetCookie(rw, &http.Cookie{
 		Name:     refreshTokenCookieName,
 		Value:    "",
-		Path:     "/api/v1/auth",
+		Path:     "/",
 		Expires:  time.Unix(0, 0).UTC(),
 		MaxAge:   -1,
 		HttpOnly: true,
-		Secure:   r.TLS != nil,
-		SameSite: http.SameSiteLaxMode,
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
 	})
 }

@@ -63,9 +63,11 @@ func (r *ConcertRepository) GetConcerts(
 	cityID *int,
 	artistID *int,
 	search string,
+	sort string,
+	direction string,
 	limit, offset *int,
-) ([]domain.Concert, error) {
-	return r.listConcerts(ctx, cityID, artistID, search, limit, offset, false)
+) ([]domain.Concert, int, error) {
+	return r.listConcerts(ctx, cityID, artistID, search, sort, direction, limit, offset, false)
 }
 
 func (r *ConcertRepository) GetConcertsAdmin(
@@ -73,10 +75,12 @@ func (r *ConcertRepository) GetConcertsAdmin(
 	cityID *int,
 	artistID *int,
 	search string,
+	sort string,
+	direction string,
 	limit, offset *int,
 	includeDeleted bool,
-) ([]domain.Concert, error) {
-	return r.listConcerts(ctx, cityID, artistID, search, limit, offset, includeDeleted)
+) ([]domain.Concert, int, error) {
+	return r.listConcerts(ctx, cityID, artistID, search, sort, direction, limit, offset, includeDeleted)
 }
 
 // Приватный метод для объединения логики фильтрации
@@ -85,9 +89,11 @@ func (r *ConcertRepository) listConcerts(
 	cityID *int,
 	artistID *int,
 	search string,
+	sort string,
+	direction string,
 	limit, offset *int,
 	includeDeleted bool,
-) ([]domain.Concert, error) {
+) ([]domain.Concert, int, error) {
 	ctx, cancel := context.WithTimeout(ctx, r.pool.OpTimeout())
 	defer cancel()
 
@@ -122,7 +128,38 @@ func (r *ConcertRepository) listConcerts(
 		whereClause = " WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	query := baseConcertSelect + whereClause + " ORDER BY c.date DESC"
+	sortExpr := "c.date"
+	switch sort {
+	case "title":
+		sortExpr = "c.title"
+	case "rating":
+		sortExpr = "COALESCE(CASE WHEN COALESCE(cs.reviews_count, 0) = 0 THEN 0 ELSE COALESCE(cs.sum_rating_total, 0)::numeric / cs.reviews_count END, 0)"
+	case "reviews":
+		sortExpr = "COALESCE(cs.reviews_count, 0)"
+	case "p1":
+		sortExpr = "COALESCE(CASE WHEN COALESCE(cs.reviews_count, 0) = 0 THEN 0 ELSE COALESCE(cs.sum_p1, 0)::numeric / cs.reviews_count END, 0)"
+	case "p2":
+		sortExpr = "COALESCE(CASE WHEN COALESCE(cs.reviews_count, 0) = 0 THEN 0 ELSE COALESCE(cs.sum_p2, 0)::numeric / cs.reviews_count END, 0)"
+	case "p3":
+		sortExpr = "COALESCE(CASE WHEN COALESCE(cs.reviews_count, 0) = 0 THEN 0 ELSE COALESCE(cs.sum_p3, 0)::numeric / cs.reviews_count END, 0)"
+	case "p4":
+		sortExpr = "COALESCE(CASE WHEN COALESCE(cs.reviews_count, 0) = 0 THEN 0 ELSE COALESCE(cs.sum_p4, 0)::numeric / cs.reviews_count END, 0)"
+	case "p5":
+		sortExpr = "COALESCE(CASE WHEN COALESCE(cs.reviews_count, 0) = 0 THEN 0 ELSE COALESCE(cs.sum_p5, 0)::numeric / cs.reviews_count END, 0)"
+	}
+
+	dir := strings.ToUpper(direction)
+	if dir != "ASC" {
+		dir = "DESC"
+	}
+
+	countQuery := `SELECT COUNT(*) FROM concerts c JOIN venues v ON c.venue_id = v.venue_id JOIN cities ct ON v.city_id = ct.city_id` + whereClause
+	var total int
+	if err := r.pool.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count list: %w", err)
+	}
+
+	query := baseConcertSelect + whereClause + fmt.Sprintf(" ORDER BY %s %s, c.date DESC", sortExpr, dir)
 
 	if limit != nil && offset != nil {
 		args = append(args, *limit, *offset)
@@ -131,7 +168,7 @@ func (r *ConcertRepository) listConcerts(
 
 	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("query list: %w", err)
+		return nil, 0, fmt.Errorf("query list: %w", err)
 	}
 	defer rows.Close()
 
@@ -145,7 +182,7 @@ func (r *ConcertRepository) listConcerts(
 			&rec.ArtistsJSON,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("scan list row: %w", err)
+			return nil, 0, fmt.Errorf("scan list row: %w", err)
 		}
 		result = append(result, rec.MapToDomain())
 	}
@@ -153,7 +190,7 @@ func (r *ConcertRepository) listConcerts(
 	if result == nil {
 		result = []domain.Concert{}
 	}
-	return result, nil
+	return result, total, nil
 }
 
 // GetSuggestionsAdmin — Список предложений для модерации

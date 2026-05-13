@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/emount4/concert_reviews/internal/core/domain"
 	core_errors "github.com/emount4/concert_reviews/internal/core/errors"
@@ -48,7 +49,7 @@ func (r *ArtistRepository) GetArtistByID(ctx context.Context, id int) (domain.Ar
 }
 
 // List — поиск и пагинация
-func (r *ArtistRepository) GetArtists(ctx context.Context, search string, limit, offset *int) ([]domain.Artist, error) {
+func (r *ArtistRepository) GetArtists(ctx context.Context, search string, sort string, direction string, hasReviews *bool, limit, offset *int) ([]domain.Artist, int, error) {
 	ctx, cancel := context.WithTimeout(ctx, r.pool.OpTimeout())
 	defer cancel()
 
@@ -75,7 +76,63 @@ func (r *ArtistRepository) GetArtists(ctx context.Context, search string, limit,
 		argIdx++
 	}
 
-	query += ` ORDER BY a.name ASC`
+	if hasReviews != nil {
+		if *hasReviews {
+			query += " AND COALESCE(s.reviews_count, 0) > 0"
+		} else {
+			query += " AND COALESCE(s.reviews_count, 0) = 0"
+		}
+	}
+
+	sortExpr := "a.name"
+	switch sort {
+	case "rating":
+		sortExpr = "COALESCE(CASE WHEN COALESCE(s.reviews_count, 0) = 0 THEN 0 ELSE COALESCE(s.sum_rating_total, 0)::numeric / s.reviews_count END, 0)"
+	case "reviews":
+		sortExpr = "COALESCE(s.reviews_count, 0)"
+	case "p1":
+		sortExpr = "COALESCE(CASE WHEN COALESCE(s.reviews_count, 0) = 0 THEN 0 ELSE COALESCE(s.sum_p1, 0)::numeric / s.reviews_count END, 0)"
+	case "p2":
+		sortExpr = "COALESCE(CASE WHEN COALESCE(s.reviews_count, 0) = 0 THEN 0 ELSE COALESCE(s.sum_p2, 0)::numeric / s.reviews_count END, 0)"
+	case "p3":
+		sortExpr = "COALESCE(CASE WHEN COALESCE(s.reviews_count, 0) = 0 THEN 0 ELSE COALESCE(s.sum_p3, 0)::numeric / s.reviews_count END, 0)"
+	case "p4":
+		sortExpr = "COALESCE(CASE WHEN COALESCE(s.reviews_count, 0) = 0 THEN 0 ELSE COALESCE(s.sum_p4, 0)::numeric / s.reviews_count END, 0)"
+	case "p5":
+		sortExpr = "COALESCE(CASE WHEN COALESCE(s.reviews_count, 0) = 0 THEN 0 ELSE COALESCE(s.sum_p5, 0)::numeric / s.reviews_count END, 0)"
+	}
+
+	dir := strings.ToUpper(direction)
+	if dir != "ASC" {
+		dir = "DESC"
+	}
+
+	countQuery := `
+		SELECT COUNT(*)
+		FROM artists a
+		LEFT JOIN artist_stats s ON a.artist_id = s.artist_id
+		WHERE a.deleted_at IS NULL`
+	countArgs := []any{}
+	argIdxCount := 1
+	if search != "" {
+		countQuery += fmt.Sprintf(" AND a.name ILIKE $%d", argIdxCount)
+		countArgs = append(countArgs, "%"+search+"%")
+		argIdxCount++
+	}
+	if hasReviews != nil {
+		if *hasReviews {
+			countQuery += " AND COALESCE(s.reviews_count, 0) > 0"
+		} else {
+			countQuery += " AND COALESCE(s.reviews_count, 0) = 0"
+		}
+	}
+
+	var total int
+	if err := r.pool.QueryRow(ctx, countQuery, countArgs...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count artists: %w", err)
+	}
+
+	query += fmt.Sprintf(" ORDER BY %s %s, a.artist_id ASC", sortExpr, dir)
 
 	// Пагинация
 	if limit != nil {
@@ -91,7 +148,7 @@ func (r *ArtistRepository) GetArtists(ctx context.Context, search string, limit,
 
 	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("query artists list: %w", err)
+		return nil, 0, fmt.Errorf("query artists list: %w", err)
 	}
 	defer rows.Close()
 
@@ -105,7 +162,7 @@ func (r *ArtistRepository) GetArtists(ctx context.Context, search string, limit,
 			&rec.Status, &rec.CreatedAt, &rec.DeletedAt,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("scan artist: %w", err)
+			return nil, 0, fmt.Errorf("scan artist: %w", err)
 		}
 		artists = append(artists, rec.MapToDomain())
 	}
@@ -113,17 +170,20 @@ func (r *ArtistRepository) GetArtists(ctx context.Context, search string, limit,
 	if artists == nil {
 		artists = []domain.Artist{}
 	}
-	return artists, nil
+	return artists, total, nil
 }
 
 // GetArtistsAdmin — список с фильтрами для админки
 func (r *ArtistRepository) GetArtistsAdmin(
 	ctx context.Context,
 	search string,
+	sort string,
+	direction string,
+	hasReviews *bool,
 	limit, offset *int,
 	includeDeleted bool,
 	status string,
-) ([]domain.Artist, error) {
+) ([]domain.Artist, int, error) {
 	ctx, cancel := context.WithTimeout(ctx, r.pool.OpTimeout())
 	defer cancel()
 
@@ -168,8 +228,72 @@ func (r *ArtistRepository) GetArtistsAdmin(
 		query += " AND a.deleted_at IS NULL"
 	}
 
+	if hasReviews != nil {
+		if *hasReviews {
+			query += " AND COALESCE(s.reviews_count, 0) > 0"
+		} else {
+			query += " AND COALESCE(s.reviews_count, 0) = 0"
+		}
+	}
+
+	sortExpr := "a.name"
+	switch sort {
+	case "rating":
+		sortExpr = "COALESCE(CASE WHEN COALESCE(s.reviews_count, 0) = 0 THEN 0 ELSE COALESCE(s.sum_rating_total, 0)::numeric / s.reviews_count END, 0)"
+	case "reviews":
+		sortExpr = "COALESCE(s.reviews_count, 0)"
+	case "p1":
+		sortExpr = "COALESCE(CASE WHEN COALESCE(s.reviews_count, 0) = 0 THEN 0 ELSE COALESCE(s.sum_p1, 0)::numeric / s.reviews_count END, 0)"
+	case "p2":
+		sortExpr = "COALESCE(CASE WHEN COALESCE(s.reviews_count, 0) = 0 THEN 0 ELSE COALESCE(s.sum_p2, 0)::numeric / s.reviews_count END, 0)"
+	case "p3":
+		sortExpr = "COALESCE(CASE WHEN COALESCE(s.reviews_count, 0) = 0 THEN 0 ELSE COALESCE(s.sum_p3, 0)::numeric / s.reviews_count END, 0)"
+	case "p4":
+		sortExpr = "COALESCE(CASE WHEN COALESCE(s.reviews_count, 0) = 0 THEN 0 ELSE COALESCE(s.sum_p4, 0)::numeric / s.reviews_count END, 0)"
+	case "p5":
+		sortExpr = "COALESCE(CASE WHEN COALESCE(s.reviews_count, 0) = 0 THEN 0 ELSE COALESCE(s.sum_p5, 0)::numeric / s.reviews_count END, 0)"
+	}
+
+	dir := strings.ToUpper(direction)
+	if dir != "ASC" {
+		dir = "DESC"
+	}
+
+	countQuery := `
+		SELECT COUNT(*)
+		FROM artists a
+		LEFT JOIN artist_stats s ON a.artist_id = s.artist_id
+		WHERE 1=1`
+	countArgs := make([]interface{}, 0)
+	argIdxCount := 1
+	if search != "" {
+		countQuery += fmt.Sprintf(" AND a.name ILIKE $%d", argIdxCount)
+		countArgs = append(countArgs, "%"+search+"%")
+		argIdxCount++
+	}
+	if status != "" {
+		countQuery += fmt.Sprintf(" AND a.status = $%d", argIdxCount)
+		countArgs = append(countArgs, status)
+		argIdxCount++
+	}
+	if !includeDeleted {
+		countQuery += " AND a.deleted_at IS NULL"
+	}
+	if hasReviews != nil {
+		if *hasReviews {
+			countQuery += " AND COALESCE(s.reviews_count, 0) > 0"
+		} else {
+			countQuery += " AND COALESCE(s.reviews_count, 0) = 0"
+		}
+	}
+
+	var total int
+	if err := r.pool.QueryRow(ctx, countQuery, countArgs...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count artists admin: %w", err)
+	}
+
 	// Сортировка по умолчанию: новые сверху
-	query += " ORDER BY a.created_at DESC"
+	query += fmt.Sprintf(" ORDER BY %s %s, a.created_at DESC", sortExpr, dir)
 
 	// Пагинация
 	if limit != nil {
@@ -185,7 +309,7 @@ func (r *ArtistRepository) GetArtistsAdmin(
 
 	rows, err := exec.Query(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("query artists admin: %w", err)
+		return nil, 0, fmt.Errorf("query artists admin: %w", err)
 	}
 	defer rows.Close()
 
@@ -199,7 +323,7 @@ func (r *ArtistRepository) GetArtistsAdmin(
 			&record.Status, &record.CreatedAt, &record.DeletedAt,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("scan artist row: %w", err)
+			return nil, 0, fmt.Errorf("scan artist row: %w", err)
 		}
 		artists = append(artists, record.MapToDomain())
 	}
@@ -207,5 +331,5 @@ func (r *ArtistRepository) GetArtistsAdmin(
 	if artists == nil {
 		artists = []domain.Artist{}
 	}
-	return artists, nil
+	return artists, total, nil
 }

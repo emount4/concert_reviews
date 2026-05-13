@@ -9,4 +9,5 @@ var (
 	ErrUnauthorized            = errors.New("unauthorized")
 	ErrRepositoryNotConfigured = errors.New("not configured")
 	ErrTxManagerNotConfigured  = errors.New("transaction manager is not configured")
+	ErrForbidden               = errors.New("forbidden")
 )

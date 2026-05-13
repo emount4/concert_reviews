@@ -9,6 +9,16 @@ import (
 
 // MapCreateRequestToDomain — маппинг из DTO в Domain
 func MapCreateRequestToDomain(req CreateReviewRequest, userID uuid.UUID) domain.Review {
+	// Маппим media_keys в ReviewMedia для проверки S3 в сервисе
+	media := make([]domain.ReviewMedia, len(req.MediaKeys))
+	for i, key := range req.MediaKeys {
+		media[i] = domain.ReviewMedia{
+			MediaURL:  key,
+			MediaType: "image", // по умолчанию image; в продакшене detectType(key)
+			Status:    domain.StatusPending,
+		}
+	}
+
 	return domain.Review{
 		ReviewID:  uuid.New(), // Генерируем новый ID
 		UserID:    userID,
@@ -22,18 +32,19 @@ func MapCreateRequestToDomain(req CreateReviewRequest, userID uuid.UUID) domain.
 		P5:        req.P5,
 		Status:    domain.StatusPending,
 		IsVisible: true,
+		Media:     media,
 	}
 }
 
 // MapDomainToReviewResponse — маппинг из Domain в Response DTO
 func MapDomainToReviewResponse(r domain.Review) ReviewResponse {
 	resp := ReviewResponse{
-		ReviewID:          r.ReviewID,
-		UserID:            r.UserID,
-		ConcertID:         r.ConcertID,
-		Title:             r.Title,
-		Text:              r.Text,
-		OriginalText:      r.OriginalText,
+		ReviewID:  r.ReviewID,
+		UserID:    r.UserID,
+		ConcertID: r.ConcertID,
+		Title:     r.Title,
+		Text:      r.Text,
+		// OriginalText:      r.OriginalText,
 		P1:                r.P1,
 		P2:                r.P2,
 		P3:                r.P3,
@@ -82,12 +93,12 @@ func MapDomainToReviewResponse(r domain.Review) ReviewResponse {
 	return resp
 }
 
-func MapDomainListToReviewResponse(reviews []domain.Review) []ReviewResponse {
+func MapDomainListToReviewResponse(reviews []domain.Review) ListReviewsResponse {
 	res := make([]ReviewResponse, len(reviews))
 	for i, r := range reviews {
 		res[i] = MapDomainToReviewResponse(r)
 	}
-	return res
+	return ListReviewsResponse{Items: res}
 }
 
 // Маппинг для списка лайкнувших

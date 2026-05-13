@@ -54,7 +54,8 @@ func CORSFromCSV(originsCSV string, allowCredentials bool, maxAgeSeconds int) Mi
 			if allowCredentials {
 				w.Header().Set(headerAllowCredentials, "true")
 			}
-			w.Header().Set(headerExposeHeaders, "X-Request-ID")
+			// Expose Set-Cookie header for credential-enabled requests
+			w.Header().Set(headerExposeHeaders, "X-Request-ID, Set-Cookie")
 
 			if isPreflight(r) {
 				w.Header().Add(headerVary, headerAccessControlRequestMth)

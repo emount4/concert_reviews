@@ -20,21 +20,24 @@ func (s *ArtistService) GetArtistByID(ctx context.Context, id int) (domain.Artis
 }
 
 // GetArtists возвращает срез доменных моделей с учетом пагинации.
-func (s *ArtistService) GetArtists(ctx context.Context, search string, limit, offset *int) ([]domain.Artist, error) {
+func (s *ArtistService) GetArtists(ctx context.Context, search string, sort string, direction string, hasReviews *bool, limit, offset *int) ([]domain.Artist, int, error) {
+	if s.artistRepository == nil {
+		return nil, 0, core_errors.ErrRepositoryNotConfigured
+	}
 	if limit != nil && *limit < 0 {
-		return nil, fmt.Errorf("limit must be non-negative: %w", core_errors.ErrInvalidArgument)
+		return nil, 0, fmt.Errorf("limit must be non-negative: %w", core_errors.ErrInvalidArgument)
 	}
 
 	if offset != nil && *offset < 0 {
-		return nil, fmt.Errorf("offset must be non-negative: %w", core_errors.ErrInvalidArgument)
+		return nil, 0, fmt.Errorf("offset must be non-negative: %w", core_errors.ErrInvalidArgument)
 	}
 
-	artists, err := s.artistRepository.GetArtists(ctx, search, limit, offset)
+	artists, total, err := s.artistRepository.GetArtists(ctx, search, sort, direction, hasReviews, limit, offset)
 	if err != nil {
-		return nil, fmt.Errorf("get artists: %w", err)
+		return nil, 0, fmt.Errorf("get artists: %w", err)
 	}
 
-	return artists, nil
+	return artists, total, nil
 }
 
 // internal/core/service/artist/artist_service.go
@@ -43,40 +46,46 @@ func (s *ArtistService) GetArtists(ctx context.Context, search string, limit, of
 func (s *ArtistService) GetArtistsAdmin(
 	ctx context.Context,
 	search string,
+	sort string,
+	direction string,
+	hasReviews *bool,
 	limit, offset *int,
 	includeDeleted bool,
 	status string,
-) ([]domain.Artist, error) {
+) ([]domain.Artist, int, error) {
 	if s.artistRepository == nil {
-		return nil, fmt.Errorf("artist repository: %w", core_errors.ErrRepositoryNotConfigured)
+		return nil, 0, fmt.Errorf("artist repository: %w", core_errors.ErrRepositoryNotConfigured)
 	}
 
 	// Валидация пагинации
 	if limit != nil && *limit < 0 {
-		return nil, fmt.Errorf("limit must be non-negative: %w", core_errors.ErrInvalidArgument)
+		return nil, 0, fmt.Errorf("limit must be non-negative: %w", core_errors.ErrInvalidArgument)
 	}
 	if offset != nil && *offset < 0 {
-		return nil, fmt.Errorf("offset must be non-negative: %w", core_errors.ErrInvalidArgument)
+		return nil, 0, fmt.Errorf("offset must be non-negative: %w", core_errors.ErrInvalidArgument)
 	}
 
 	// Валидация статуса (если передан)
 	if status != "" && !isValidContentStatus(status) {
-		return nil, fmt.Errorf("invalid status filter: %w", core_errors.ErrInvalidArgument)
+		return nil, 0, fmt.Errorf("invalid status filter: %w", core_errors.ErrInvalidArgument)
 	}
 
-	artists, err := s.artistRepository.GetArtistsAdmin(
+	artists, total, err := s.artistRepository.GetArtistsAdmin(
 		ctx,
 		search,
+		sort,
+		direction,
+		hasReviews,
 		limit,
 		offset,
 		includeDeleted,
 		status,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("get artists admin from repository: %w", err)
+		return nil, 0, fmt.Errorf("get artists admin from repository: %w", err)
 	}
 
-	return artists, nil
+	return artists, total, nil
 }
 
 // Вспомогательная функция для валидации статуса

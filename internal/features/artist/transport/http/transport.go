@@ -11,7 +11,7 @@ import (
 type Service interface {
 	CreateArtist(ctx context.Context, city domain.Artist) (domain.Artist, error)
 	GetArtistByID(ctx context.Context, id int) (domain.Artist, error)
-	GetArtists(ctx context.Context, search string, limit, offset *int) ([]domain.Artist, error)
+	GetArtists(ctx context.Context, search string, sort string, direction string, hasReviews *bool, limit, offset *int) ([]domain.Artist, int, error)
 	PatchArtist(ctx context.Context, id int, patch domain.ArtistPatch) (domain.Artist, error)
 	DeleteArtistHard(ctx context.Context, id int) error
 	DeleteArtistSoft(ctx context.Context, id int) error
@@ -19,10 +19,13 @@ type Service interface {
 	GetArtistsAdmin(
 		ctx context.Context,
 		search string,
+		sort string,
+		direction string,
+		hasReviews *bool,
 		limit, offset *int,
 		includeDeleted bool,
 		status string,
-	) ([]domain.Artist, error)
+	) ([]domain.Artist, int, error)
 }
 
 type ArtistHTTPHandler struct {

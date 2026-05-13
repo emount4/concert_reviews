@@ -76,7 +76,8 @@ type ConcertResponse struct {
 }
 
 type ListConcertsResponse struct {
-	Items []ConcertResponse `json:"items"`
+	Items     []ConcertResponse `json:"items"`
+	PageCount int               `json:"page_count"`
 }
 
 // --- Suggestion Requests ---
@@ -120,5 +121,6 @@ type ConcertResponseAdmin struct {
 }
 
 type ListConcertsAdminResponse struct {
-	Items []ConcertResponseAdmin `json:"items"`
+	Items     []ConcertResponseAdmin `json:"items"`
+	PageCount int                  `json:"page_count"`
 }

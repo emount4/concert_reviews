@@ -35,7 +35,8 @@ type ArtistResponse struct {
 }
 
 type ListArtistsResponse struct {
-	Items []ArtistResponse `json:"items"`
+	Items     []ArtistResponse `json:"items"`
+	PageCount int              `json:"page_count"`
 }
 
 // --- Mappers (Конвертация) ---
@@ -136,7 +137,8 @@ type ArtistStatsResponse struct {
 }
 
 type ListArtistsAdminResponse struct {
-	Items []ArtistAdminResponse `json:"items"`
+	Items     []ArtistAdminResponse `json:"items"`
+	PageCount int                  `json:"page_count"`
 }
 
 func MapDomainToAdminResponse(a domain.Artist) ArtistAdminResponse {

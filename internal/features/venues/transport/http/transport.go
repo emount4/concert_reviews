@@ -11,12 +11,12 @@ import (
 type Service interface {
 	CreateVenue(ctx context.Context, venue domain.Venue) (domain.Venue, error)
 	GetVenueByID(ctx context.Context, id int) (domain.Venue, error)
-	GetVenues(ctx context.Context, cityID *int, search string, limit, offset *int) ([]domain.Venue, error)
+	GetVenues(ctx context.Context, cityID *int, search string, sort string, direction string, capacityFrom, capacityTo *int, limit, offset *int) ([]domain.Venue, int, error)
 	UpdateVenue(ctx context.Context, id int, patch domain.VenuePatch) (domain.Venue, error)
 	DeleteVenueHard(ctx context.Context, id int) error
 	DeleteVenueSoft(ctx context.Context, id int) error
 	RestoreVenue(ctx context.Context, id int) (domain.Venue, error)
-	GetVenuesAdmin(ctx context.Context, cityID *int, search string, limit, offset *int, includeDeleted bool, status string) ([]domain.Venue, error)
+	GetVenuesAdmin(ctx context.Context, cityID *int, search string, sort string, direction string, capacityFrom, capacityTo *int, limit, offset *int, includeDeleted bool, status string) ([]domain.Venue, int, error)
 }
 
 type VenueHTTPHandler struct {

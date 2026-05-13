@@ -62,3 +62,18 @@ func GetSortParams(r *http.Request, defaultSort string) (string, string) {
 
 	return sort, direction
 }
+
+func GetSortParamsDetailed(r *http.Request, defaultSort, defaultDirection string) (string, string, bool) {
+	sort := r.URL.Query().Get("sort")
+	if sort == "" {
+		sort = defaultSort
+	}
+
+	rawDirection := strings.ToUpper(r.URL.Query().Get("direction"))
+	switch rawDirection {
+	case "ASC", "DESC":
+		return sort, rawDirection, true
+	default:
+		return sort, strings.ToUpper(defaultDirection), false
+	}
+}

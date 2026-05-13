@@ -80,10 +80,19 @@ func (h *ArtistHTTPHandler) GetArtistsAdmin(rw http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	sort, direction, directionProvided := core_http_request.GetSortParamsDetailed(r, "name", "ASC")
+	if !allowedArtistSort(sort) {
+		sort = "name"
+	}
+	if !directionProvided {
+		direction = defaultArtistDirection(sort)
+	}
+
 	// Фильтры
 	includeDeletedPtr := core_http_request.GetBoolQueryParam(r, "include_deleted")
 	statusPtr := core_http_request.GetStringQueryParam(r, "status")
 	searchPtr := core_http_request.GetStringQueryParam(r, "search")
+	hasReviews := core_http_request.GetBoolQueryParam(r, "has_reviews")
 
 	includeDeleted := false
 	if includeDeletedPtr != nil {
@@ -101,9 +110,12 @@ func (h *ArtistHTTPHandler) GetArtistsAdmin(rw http.ResponseWriter, r *http.Requ
 	}
 
 	// Вызов сервиса
-	artists, err := h.artistService.GetArtistsAdmin(
+	artists, total, err := h.artistService.GetArtistsAdmin(
 		ctx,
 		search,
+		sort,
+		direction,
+		hasReviews,
 		limit,
 		offset,
 		includeDeleted,
@@ -118,6 +130,7 @@ func (h *ArtistHTTPHandler) GetArtistsAdmin(rw http.ResponseWriter, r *http.Requ
 	// Используем тот же MapDomainListToResponse, либо создаём отдельный для админки
 	// Если нужно показывать deleted_at — расширьте ArtistResponse или сделайте Admin-версию
 	response := MapDomainListToAdminResponse(artists)
+	response.PageCount = core_http_request.GetPageCount(total, limit)
 
 	rw.Header().Set("Content-Type", "application/json")
 	responseHandler.JSONResponse(response, http.StatusOK)

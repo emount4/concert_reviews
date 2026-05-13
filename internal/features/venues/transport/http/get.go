@@ -8,6 +8,22 @@ import (
 	core_http_response "github.com/emount4/concert_reviews/internal/core/transport/http/response"
 )
 
+func defaultVenueDirection(sort string) string {
+	if sort == "name" {
+		return "ASC"
+	}
+	return "DESC"
+}
+
+func allowedVenueSort(sort string) bool {
+	switch sort {
+	case "name", "rating", "capacity", "p1", "p2", "p3", "p4", "p5":
+		return true
+	default:
+		return false
+	}
+}
+
 // GetVenues — публичный список с пагинацией и фильтрами
 // GET /venues?city_id=1&search=stadium&limit=20&offset=0
 func (h *VenueHTTPHandler) GetVenues(rw http.ResponseWriter, r *http.Request) {
@@ -21,6 +37,14 @@ func (h *VenueHTTPHandler) GetVenues(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	sort, direction, directionProvided := core_http_request.GetSortParamsDetailed(r, "name", "ASC")
+	if !allowedVenueSort(sort) {
+		sort = "name"
+	}
+	if !directionProvided {
+		direction = defaultVenueDirection(sort)
+	}
+
 	cityID, err := core_http_request.GetIntQueryParam(r, "city_id")
 	if err != nil {
 		responseHandler.ErrorResponse(err, "invalid city query param")
@@ -28,14 +52,25 @@ func (h *VenueHTTPHandler) GetVenues(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	search := core_http_request.GetStringQueryParam(r, "search")
+	capacityFrom, err := core_http_request.GetIntQueryParam(r, "capacity_from")
+	if err != nil {
+		responseHandler.ErrorResponse(err, "invalid capacity_from query param")
+		return
+	}
+	capacityTo, err := core_http_request.GetIntQueryParam(r, "capacity_to")
+	if err != nil {
+		responseHandler.ErrorResponse(err, "invalid capacity_to query param")
+		return
+	}
 
-	venues, err := h.venueService.GetVenues(ctx, cityID, *search, limit, offset)
+	venues, total, err := h.venueService.GetVenues(ctx, cityID, *search, sort, direction, capacityFrom, capacityTo, limit, offset)
 	if err != nil {
 		responseHandler.ErrorResponse(err, "failed to get venues")
 		return
 	}
 
 	response := MapDomainListToVenueResponse(venues)
+	response.PageCount = core_http_request.GetPageCount(total, limit)
 
 	rw.Header().Set("Content-Type", "application/json")
 	responseHandler.JSONResponse(response, http.StatusOK)
@@ -64,10 +99,7 @@ func (h *VenueHTTPHandler) GetVenue(rw http.ResponseWriter, r *http.Request) {
 	responseHandler.JSONResponse(response, http.StatusOK)
 }
 
-// GetVenuesAdmin — список для админки (с флагами include_deleted, status)
-// GET /admin/venues?city_id=1&search=club&status=active&include_deleted=true
-
-// ЛОЖИТСЯ С ПАНИКОЙ - НАДО ФИКСИТЬ
+// GetVenuesAdmin — список для админки
 func (h *VenueHTTPHandler) GetVenuesAdmin(rw http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := core_logger.FromContext(ctx)
@@ -79,6 +111,14 @@ func (h *VenueHTTPHandler) GetVenuesAdmin(rw http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	sort, direction, directionProvided := core_http_request.GetSortParamsDetailed(r, "name", "ASC")
+	if !allowedVenueSort(sort) {
+		sort = "name"
+	}
+	if !directionProvided {
+		direction = defaultVenueDirection(sort)
+	}
+
 	cityID, err := core_http_request.GetIntQueryParam(r, "city_id")
 	if err != nil {
 		responseHandler.ErrorResponse(err, "invalid city query param")
@@ -88,11 +128,25 @@ func (h *VenueHTTPHandler) GetVenuesAdmin(rw http.ResponseWriter, r *http.Reques
 	search := core_http_request.DerefOr(core_http_request.GetStringQueryParam(r, "search"), "")
 	status := core_http_request.DerefOr(core_http_request.GetStringQueryParam(r, "status"), "")
 	includeDeleted := core_http_request.DerefOr(core_http_request.GetBoolQueryParam(r, "include_deleted"), false)
+	capacityFrom, err := core_http_request.GetIntQueryParam(r, "capacity_from")
+	if err != nil {
+		responseHandler.ErrorResponse(err, "invalid capacity_from query param")
+		return
+	}
+	capacityTo, err := core_http_request.GetIntQueryParam(r, "capacity_to")
+	if err != nil {
+		responseHandler.ErrorResponse(err, "invalid capacity_to query param")
+		return
+	}
 
-	venues, err := h.venueService.GetVenuesAdmin(
+	venues, total, err := h.venueService.GetVenuesAdmin(
 		ctx,
 		cityID,
 		search,
+		sort,
+		direction,
+		capacityFrom,
+		capacityTo,
 		limit,
 		offset,
 		includeDeleted,
@@ -104,6 +158,7 @@ func (h *VenueHTTPHandler) GetVenuesAdmin(rw http.ResponseWriter, r *http.Reques
 	}
 
 	response := MapDomainListToVenueAdminResponse(venues)
+	response.PageCount = core_http_request.GetPageCount(total, limit)
 
 	rw.Header().Set("Content-Type", "application/json")
 	responseHandler.JSONResponse(response, http.StatusOK)

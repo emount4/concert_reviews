@@ -21,8 +21,10 @@ type ConcertRepository interface {
 		cityID *int,
 		artistID *int,
 		search string,
+		sort string,
+		direction string,
 		limit, offset *int,
-	) ([]domain.Concert, error)
+	) ([]domain.Concert, int, error)
 	GetConcertByID(ctx context.Context, id uuid.UUID) (domain.Concert, error)
 	UpdateConcert(ctx context.Context, id uuid.UUID, patch domain.ConcertPatch) (domain.Concert, error)
 	DeleteConcertHard(ctx context.Context, id uuid.UUID) error
@@ -35,9 +37,11 @@ type ConcertRepository interface {
 		cityID *int,
 		artistID *int,
 		search string,
+		sort string,
+		direction string,
 		limit, offset *int,
 		includeDeleted bool,
-	) ([]domain.Concert, error)
+	) ([]domain.Concert, int, error)
 
 	// Методы для работы с артистами в концертах
 	AddConcertArtist(ctx context.Context, concertID uuid.UUID, artistID int, isMain bool) error

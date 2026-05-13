@@ -13,12 +13,12 @@ type Service interface {
 	// Основные концерты
 	CreateConcert(ctx context.Context, concert domain.Concert, artists []domain.ConcertArtist) (domain.Concert, error)
 	GetConcertByID(ctx context.Context, id uuid.UUID) (domain.Concert, error)
-	GetConcerts(ctx context.Context, cityID *int, artistID *int, search string, limit, offset *int) ([]domain.Concert, error)
+	GetConcerts(ctx context.Context, cityID *int, artistID *int, search string, sort string, direction string, limit, offset *int) ([]domain.Concert, int, error)
 	UpdateConcert(ctx context.Context, id uuid.UUID, patch domain.ConcertPatch) (domain.Concert, error)
 	DeleteConcertHard(ctx context.Context, id uuid.UUID) error
 	DeleteConcertSoft(ctx context.Context, id uuid.UUID) error
 	RestoreConcert(ctx context.Context, id uuid.UUID) (domain.Concert, error)
-	GetConcertsAdmin(ctx context.Context, cityID *int, artistID *int, search string, limit, offset *int, includeDeleted bool) ([]domain.Concert, error)
+	GetConcertsAdmin(ctx context.Context, cityID *int, artistID *int, search string, sort string, direction string, limit, offset *int, includeDeleted bool) ([]domain.Concert, int, error)
 
 	// Предложения (Suggestions)
 	SuggestConcert(ctx context.Context, suggestion domain.ConcertSuggestion) (domain.ConcertSuggestion, error)
