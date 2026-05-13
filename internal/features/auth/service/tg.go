@@ -60,7 +60,7 @@ func (s *AuthService) LoginTG(
 		return core_domain.AuthResponse{}, fmt.Errorf("get user by telegram id: %w", err)
 	}
 
-	tokens, err := s.jwt.Generate(user.ID, user.RoleID, s.config.AccessTokenTTL)
+	tokens, err := s.jwt.Generate(user.ID, user.RoleID, s.config.AccessTokenTTL, s.config.RefreshTokenTTL)
 	if err != nil {
 		return core_domain.AuthResponse{}, fmt.Errorf("generate tokens: %w", err)
 	}
@@ -97,4 +97,23 @@ func (s *AuthService) getData(ctx context.Context, initData string) (initdata.In
 	}
 
 	return data, nil
+}
+
+func (s *AuthService) Link(ctx context.Context, id uuid.UUID, initData string) error {
+	if s.authRepository == nil {
+		return ErrAuthRepositoryNotConfigured
+	}
+
+	data, err := s.getData(ctx, initData)
+	if err != nil {
+		return fmt.Errorf("init data: %w", err)
+	}
+
+	err = s.authRepository.LinkTG(ctx, id, data.User.Username, data.User.ID)
+
+	if err != nil {
+		return fmt.Errorf("cannot link tg: %w", err)
+	}
+
+	return nil
 }

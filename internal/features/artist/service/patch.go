@@ -17,13 +17,20 @@ func (s *ArtistService) PatchArtist(
 		return domain.Artist{}, fmt.Errorf("get artist: %w", err)
 	}
 
-	err = artist.ApplyPatch(patch)
+	// Validate patch first
+	if err := patch.Validate(); err != nil {
+		return domain.Artist{}, fmt.Errorf("validate patch: %w", err)
+	}
+
+	// Check S3 file before applying patch
 	if patch.PhotoKey.Set && patch.PhotoKey.Value != nil {
 		if _, err := s.s3.FileExists(ctx, *patch.PhotoKey.Value); err != nil {
-			return domain.Artist{}, fmt.Errorf("file is not exist: %w", err)
+			return domain.Artist{}, fmt.Errorf("photo file not found in S3: %w", err)
 		}
 	}
-	if err != nil {
+
+	// Apply patch to domain model
+	if err := artist.ApplyPatch(patch); err != nil {
 		return domain.Artist{}, fmt.Errorf("apply artist patch: %w", err)
 	}
 

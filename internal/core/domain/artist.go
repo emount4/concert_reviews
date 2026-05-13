@@ -10,7 +10,6 @@ import (
 	core_types "github.com/emount4/concert_reviews/internal/core/types"
 )
 
-// ContentStatus — тип для статуса контента (Enum)
 type ContentStatus string
 
 const (
@@ -26,6 +25,7 @@ type Artist struct {
 	Description *string
 	PhotoURL    *string
 	SocialLinks map[string]string
+	Stats       *ContentStats
 	Status      ContentStatus
 	CreatedAt   time.Time
 	DeletedAt   *time.Time

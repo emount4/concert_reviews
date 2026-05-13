@@ -8,10 +8,11 @@ import (
 )
 
 type Config struct {
-	PasswordSalt   string        `envconfig:"PASSWORD_SALT" required:"true"`
-	JWTSigningKey  string        `envconfig:"JWT_SIGNING_KEY" required:"true"`
-	AccessTokenTTL time.Duration `envconfig:"ACCESS_TOKEN_TTL" required:"true"`
-	BotToken       string        `envconfig:"BOT_TOKEN" required:"true"`
+	PasswordSalt    string        `envconfig:"PASSWORD_SALT" required:"true"`
+	JWTSigningKey   string        `envconfig:"JWT_SIGNING_KEY" required:"true"`
+	AccessTokenTTL  time.Duration `envconfig:"ACCESS_TOKEN_TTL" required:"true"`
+	RefreshTokenTTL time.Duration `envconfig:"REFRESH_TOKEN_TTL" required:"true"`
+	BotToken        string        `envconfig:"BOT_TOKEN" required:"true"`
 }
 
 func NewConfig() (Config, error) {

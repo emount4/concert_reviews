@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	core_errors "github.com/emount4/concert_reviews/internal/core/errors"
 )
@@ -45,5 +46,34 @@ func GetBoolQueryParam(r *http.Request, key string) *bool {
 		return &v
 	default:
 		return nil
+	}
+}
+
+func GetSortParams(r *http.Request, defaultSort string) (string, string) {
+	sort := r.URL.Query().Get("sort")
+	if sort == "" {
+		sort = defaultSort
+	}
+
+	direction := strings.ToUpper(r.URL.Query().Get("direction"))
+	if direction != "ASC" {
+		direction = "DESC" // По умолчанию всегда новые/лучшие сверху
+	}
+
+	return sort, direction
+}
+
+func GetSortParamsDetailed(r *http.Request, defaultSort, defaultDirection string) (string, string, bool) {
+	sort := r.URL.Query().Get("sort")
+	if sort == "" {
+		sort = defaultSort
+	}
+
+	rawDirection := strings.ToUpper(r.URL.Query().Get("direction"))
+	switch rawDirection {
+	case "ASC", "DESC":
+		return sort, rawDirection, true
+	default:
+		return sort, strings.ToUpper(defaultDirection), false
 	}
 }

@@ -19,15 +19,29 @@ func (h *AuthHTTPHandler) Logout(rw http.ResponseWriter, r *http.Request) {
 	responseHandler :=
 		core_http_response.NewHTTPResponseHandler(log, rw)
 
-	var req LogoutRequest
-	if err := core_http_request.DecodeAndValidateRequest(r, &req); err != nil {
-		responseHandler.ErrorResponse(err, "failed to decode and validate http request")
+	refreshToken, err := logoutTokenFromRequest(r)
+	if err != nil {
+		responseHandler.ErrorResponse(err, "failed to get refresh token")
 		return
 	}
 
-	if err := h.authService.Logout(ctx, req.RefreshToken); err != nil {
+	if err := h.authService.Logout(ctx, refreshToken); err != nil {
 		log.Warn("logout failed or token not found", zap.Error(err))
 	}
 
+	clearRefreshTokenCookie(rw, r)
 	responseHandler.JSONResponse(nil, http.StatusNoContent)
+}
+
+func logoutTokenFromRequest(r *http.Request) (string, error) {
+	if cookie, err := r.Cookie(refreshTokenCookieName); err == nil && cookie.Value != "" {
+		return cookie.Value, nil
+	}
+
+	var req LogoutRequest
+	if err := core_http_request.DecodeAndValidateRequest(r, &req); err != nil {
+		return "", err
+	}
+
+	return req.RefreshToken, nil
 }

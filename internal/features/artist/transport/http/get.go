@@ -8,6 +8,22 @@ import (
 	core_http_response "github.com/emount4/concert_reviews/internal/core/transport/http/response"
 )
 
+func defaultArtistDirection(sort string) string {
+	if sort == "name" {
+		return "ASC"
+	}
+	return "DESC"
+}
+
+func allowedArtistSort(sort string) bool {
+	switch sort {
+	case "name", "rating", "reviews", "p1", "p2", "p3", "p4", "p5":
+		return true
+	default:
+		return false
+	}
+}
+
 func (h *ArtistHTTPHandler) GetArtists(rw http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := core_logger.FromContext(ctx)
@@ -20,16 +36,26 @@ func (h *ArtistHTTPHandler) GetArtists(rw http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	search := core_http_request.GetStringQueryParam(r, "search")
+	sort, direction, directionProvided := core_http_request.GetSortParamsDetailed(r, "name", "ASC")
+	if !allowedArtistSort(sort) {
+		sort = "name"
+	}
+	if !directionProvided {
+		direction = defaultArtistDirection(sort)
+	}
 
-	artistsDomains, err := h.artistService.GetArtists(ctx, *search, limit, offset)
+	search := core_http_request.GetStringQueryParam(r, "search")
+	hasReviews := core_http_request.GetBoolQueryParam(r, "has_reviews")
+
+	artistsDomains, total, err := h.artistService.GetArtists(ctx, *search, sort, direction, hasReviews, limit, offset)
 
 	if err != nil {
-		responseHandler.ErrorResponse(err, "failed to get cities")
+		responseHandler.ErrorResponse(err, "failed to get artists")
 		return
 	}
 
 	artistsDTO := MapDomainListToResponse(artistsDomains)
+	artistsDTO.PageCount = core_http_request.GetPageCount(total, limit)
 
 	rw.Header().Set("Content-Type", "application/json")
 	responseHandler.JSONResponse(artistsDTO, http.StatusOK)

@@ -45,6 +45,7 @@ func (s *AuthService) Refresh(
 		user.ID,
 		user.RoleID,
 		s.config.AccessTokenTTL,
+		s.config.RefreshTokenTTL,
 	)
 	if err != nil {
 		return core_domain.AuthResponse{}, core_errors.ErrUnauthorized

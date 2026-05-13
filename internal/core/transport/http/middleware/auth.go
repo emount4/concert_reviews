@@ -3,10 +3,12 @@ package core_http_middleware
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
 	auth_service "github.com/emount4/concert_reviews/internal/features/auth/service"
+	"github.com/google/uuid"
 )
 
 // TODO: ЗАМЕНИТЬ НА ИНТЕРФЕЙС
@@ -54,4 +56,16 @@ func writeJSONError(w http.ResponseWriter, statusCode int, message string) {
 		"message": message,
 		"error":   message,
 	})
+}
+
+func GetUserID(ctx context.Context) (uuid.UUID, error) {
+	id := ctx.Value(UserIDKey)
+	if id == nil {
+		return uuid.Nil, fmt.Errorf("user id not found in context")
+	}
+	userID, ok := id.(uuid.UUID)
+	if !ok {
+		return uuid.Nil, fmt.Errorf("user id in context is not uuid.UUID, got %T", id)
+	}
+	return userID, nil
 }

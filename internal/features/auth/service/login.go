@@ -39,7 +39,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (core_d
 		return core_domain.AuthResponse{}, fmt.Errorf("%w: invalid credentials", core_errors.ErrUnauthorized)
 	}
 
-	tokens, err := s.jwt.Generate(user.ID, user.RoleID, s.config.AccessTokenTTL)
+	tokens, err := s.jwt.Generate(user.ID, user.RoleID, s.config.AccessTokenTTL, s.config.RefreshTokenTTL)
 	if err != nil {
 		return core_domain.AuthResponse{}, fmt.Errorf("generate tokens: %w", err)
 	}

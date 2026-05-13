@@ -19,10 +19,9 @@ type RegisterRequest struct {
 }
 
 type RegisterResponse struct {
-	UserID       string `json:"user_id"`
-	Username     string `json:"username"`
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	UserID      string `json:"user_id"`
+	Username    string `json:"username"`
+	AccessToken string `json:"access_token"`
 }
 
 func (h *AuthHTTPHandler) Register(rw http.ResponseWriter, r *http.Request) {
@@ -51,6 +50,7 @@ func (h *AuthHTTPHandler) Register(rw http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	setRefreshTokenCookie(rw, r, authResponse.RefreshToken, authResponse.ExpiresAt)
 	rw.Header().Set("Content-Type", "application/json")
 	response := dtoFromDomain(authResponse)
 
@@ -63,9 +63,8 @@ func domainFromDto(dto RegisterRequest) core_domain.User {
 
 func dtoFromDomain(response core_domain.AuthResponse) RegisterResponse {
 	return RegisterResponse{
-		UserID:       response.User.ID.String(),
-		Username:     response.User.Username,
-		AccessToken:  response.AccessToken,
-		RefreshToken: response.RefreshToken,
+		UserID:      response.User.ID.String(),
+		Username:    response.User.Username,
+		AccessToken: response.AccessToken,
 	}
 }

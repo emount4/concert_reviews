@@ -33,3 +33,17 @@ func GetIntPathValue(r *http.Request, key string) (int, error) {
 
 	return pathValueInt, nil
 }
+
+func GetStringPathValue(r *http.Request, key string) (string, error) {
+	val := r.PathValue(key)
+	if val == "" {
+		return "", fmt.Errorf(
+			"invalid path value, path value:'%s' by key:'%s': %w",
+			val,
+			key,
+			core_errors.ErrInvalidArgument,
+		)
+	}
+	return val, nil
+
+}

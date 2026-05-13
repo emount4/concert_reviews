@@ -15,10 +15,9 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	UserID       string `json:"user_id"`
-	Username     string `json:"username"`
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	UserID      string `json:"user_id"`
+	Username    string `json:"username"`
+	AccessToken string `json:"access_token"`
 }
 
 func (h *AuthHTTPHandler) Login(rw http.ResponseWriter, r *http.Request) {
@@ -38,6 +37,7 @@ func (h *AuthHTTPHandler) Login(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	setRefreshTokenCookie(rw, r, authResponse.RefreshToken, authResponse.ExpiresAt)
 	response := loginDtoFromDomain(authResponse)
 	rw.Header().Set("Content-Type", "application/json")
 	responseHandler.JSONResponse(response, http.StatusOK)
@@ -45,9 +45,8 @@ func (h *AuthHTTPHandler) Login(rw http.ResponseWriter, r *http.Request) {
 
 func loginDtoFromDomain(response core_domain.AuthResponse) LoginResponse {
 	return LoginResponse{
-		UserID:       response.User.ID.String(),
-		Username:     response.User.Username,
-		AccessToken:  response.AccessToken,
-		RefreshToken: response.RefreshToken,
+		UserID:      response.User.ID.String(),
+		Username:    response.User.Username,
+		AccessToken: response.AccessToken,
 	}
 }

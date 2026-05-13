@@ -23,7 +23,8 @@ type JWTManager interface {
 	NewRefreshToken() (string, error)
 	Generate(userID uuid.UUID,
 		roleID int,
-		ttl time.Duration,
+		accessTTL time.Duration,
+		refreshTTL time.Duration,
 	) (core_domain.AuthResponse, error)
 }
 
@@ -35,9 +36,14 @@ func NewManager(signingKey string) *Manager {
 	return &Manager{signingKey: signingKey}
 }
 
-func (m *Manager) Generate(userID uuid.UUID, roleID int, ttl time.Duration) (core_domain.AuthResponse, error) {
+func (m *Manager) Generate(
+	userID uuid.UUID,
+	roleID int,
+	accessTTL time.Duration,
+	refreshTTL time.Duration,
+) (core_domain.AuthResponse, error) {
 	now := time.Now()
-	accessToken, err := m.NewAccessToken(userID, roleID, ttl)
+	accessToken, err := m.NewAccessToken(userID, roleID, accessTTL)
 	if err != nil {
 		return core_domain.AuthResponse{}, fmt.Errorf("generate access token: %w", err)
 	}
@@ -50,7 +56,7 @@ func (m *Manager) Generate(userID uuid.UUID, roleID int, ttl time.Duration) (cor
 	return core_domain.AuthResponse{
 		RefreshToken: refreshToken,
 		AccessToken:  accessToken,
-		ExpiresAt:    now.Add(ttl),
+		ExpiresAt:    now.Add(refreshTTL),
 	}, nil
 
 }

@@ -2,6 +2,7 @@ package core_http_request
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 )
 
@@ -17,4 +18,14 @@ func GetLimitOffsetByQueryParam(r *http.Request) (*int, *int, error) {
 	}
 
 	return limit, offset, nil
+}
+
+func GetPageCount(total int, limit *int) int {
+	if total <= 0 {
+		return 0
+	}
+	if limit == nil || *limit <= 0 {
+		return 1
+	}
+	return int(math.Ceil(float64(total) / float64(*limit)))
 }

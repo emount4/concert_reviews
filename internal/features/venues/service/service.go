@@ -18,8 +18,11 @@ type VenueRepository interface {
 		ctx context.Context,
 		cityID *int,
 		search string,
+		sort string,
+		direction string,
+		capacityFrom, capacityTo *int,
 		limit, offset *int,
-	) ([]domain.Venue, error)
+	) ([]domain.Venue, int, error)
 	GetVenueByID(ctx context.Context, id int) (domain.Venue, error)
 	PatchVenue(ctx context.Context, id int, patch domain.VenuePatch) (domain.Venue, error)
 	DeleteVenueHard(ctx context.Context, id int) error
@@ -32,10 +35,13 @@ type VenueRepository interface {
 		ctx context.Context,
 		cityID *int,
 		search string,
+		sort string,
+		direction string,
+		capacityFrom, capacityTo *int,
 		limit, offset *int,
 		includeDeleted bool,
 		status string,
-	) ([]domain.Venue, error)
+	) ([]domain.Venue, int, error)
 
 	CityExists(ctx context.Context, id int) (bool, error)
 }
