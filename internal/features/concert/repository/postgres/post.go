@@ -65,7 +65,7 @@ func (r *ConcertRepository) CreateConcert(
 		return domain.Concert{}, err
 	}
 
-	return r.GetConcertByID(ctx, concert.ConcertID)
+	return r.GetConcertByID(ctx, concert.ConcertID, uuid.Nil)
 }
 
 func (r *ConcertRepository) CreateSuggestion(ctx context.Context, s domain.ConcertSuggestion) (domain.ConcertSuggestion, error) {

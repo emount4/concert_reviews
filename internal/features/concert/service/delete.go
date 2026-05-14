@@ -25,7 +25,7 @@ func (s *ConcertService) DeleteConcertHard(ctx context.Context, id uuid.UUID) er
 		return fmt.Errorf("concert id is nil: %w", core_errors.ErrInvalidArgument)
 	}
 
-	concert, err := s.concertRepository.GetConcertByID(ctx, id)
+	concert, err := s.concertRepository.GetConcertByID(ctx, id, uuid.Nil)
 	if err != nil {
 		return fmt.Errorf("fetch concert %s before hard delete: %w", id, err)
 	}

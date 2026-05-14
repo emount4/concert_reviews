@@ -74,6 +74,8 @@ type Concert struct {
 	Stats   *ConcertStats
 	Venue   *Venue
 	Artists []ConcertArtist
+
+	UserReviewStatus *ModerationStatus
 }
 
 func (c *Concert) Validate() error {

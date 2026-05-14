@@ -38,7 +38,7 @@ func (r *ConcertRepository) RestoreConcert(ctx context.Context, id uuid.UUID) (d
 	if res.RowsAffected() == 0 {
 		return domain.Concert{}, core_errors.ErrNotFound
 	}
-	return r.GetConcertByID(ctx, id)
+	return r.GetConcertByID(ctx, id, uuid.Nil)
 }
 
 func (r *ConcertRepository) DeleteConcertHard(ctx context.Context, id uuid.UUID) error {

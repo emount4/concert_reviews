@@ -18,7 +18,7 @@ func (s *ConcertService) UpdateConcert(
 		return domain.Concert{}, core_errors.ErrRepositoryNotConfigured
 	}
 
-	concert, err := s.concertRepository.GetConcertByID(ctx, id)
+	concert, err := s.concertRepository.GetConcertByID(ctx, id, uuid.Nil)
 	if err != nil {
 		return domain.Concert{}, fmt.Errorf("fetch concert for update: %w", err)
 	}

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	core_logger "github.com/emount4/concert_reviews/internal/core/logger"
+	core_http_middleware "github.com/emount4/concert_reviews/internal/core/transport/http/middleware"
 	core_http_request "github.com/emount4/concert_reviews/internal/core/transport/http/request"
 	core_http_response "github.com/emount4/concert_reviews/internal/core/transport/http/response"
 	"github.com/google/uuid"
@@ -79,7 +80,9 @@ func (h *ConcertHTTPHandler) GetConcert(rw http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	concert, err := h.concertService.GetConcertByID(ctx, id)
+	userID, err := core_http_middleware.GetUserID(ctx)
+
+	concert, err := h.concertService.GetConcertByID(ctx, id, userID)
 	if err != nil {
 		responseHandler.ErrorResponse(err, "failed to get concert")
 		return

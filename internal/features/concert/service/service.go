@@ -25,7 +25,7 @@ type ConcertRepository interface {
 		direction string,
 		limit, offset *int,
 	) ([]domain.Concert, int, error)
-	GetConcertByID(ctx context.Context, id uuid.UUID) (domain.Concert, error)
+	GetConcertByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (domain.Concert, error)
 	UpdateConcert(ctx context.Context, id uuid.UUID, patch domain.ConcertPatch) (domain.Concert, error)
 	DeleteConcertHard(ctx context.Context, id uuid.UUID) error
 	DeleteConcertSoft(ctx context.Context, id uuid.UUID) error

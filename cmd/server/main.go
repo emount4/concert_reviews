@@ -212,6 +212,11 @@ func applyRouteAccessPolicy(routes []core_http_server.Route, jwtManager auth_ser
 				routes[i].Middleware,
 				core_http_middleware.Auth(jwtManager),
 			)
+		default:
+			routes[i].Middleware = append(
+				routes[i].Middleware,
+				core_http_middleware.OptionalAuth(jwtManager),
+			)
 		}
 	}
 }

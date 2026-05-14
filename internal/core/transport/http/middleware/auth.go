@@ -11,8 +11,12 @@ import (
 	"github.com/google/uuid"
 )
 
+type JwtManager interface {
+	Parse(accessToken string) (*auth_service.JWTClaims, error)
+}
+
 // TODO: ЗАМЕНИТЬ НА ИНТЕРФЕЙС
-func Auth(jwtManager auth_service.JWTManager) Middleware {
+func Auth(jwtManager JwtManager) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(
 			w http.ResponseWriter,

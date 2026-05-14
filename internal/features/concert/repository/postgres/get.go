@@ -8,8 +8,10 @@ import (
 
 	"github.com/emount4/concert_reviews/internal/core/domain"
 	core_errors "github.com/emount4/concert_reviews/internal/core/errors"
+	core_logger "github.com/emount4/concert_reviews/internal/core/logger"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"go.uber.org/zap"
 )
 
 const baseConcertSelect = `
@@ -34,9 +36,11 @@ const baseConcertSelect = `
 	LEFT JOIN concert_stats cs ON c.concert_id = cs.concert_id
 `
 
-func (r *ConcertRepository) GetConcertByID(ctx context.Context, id uuid.UUID) (domain.Concert, error) {
+func (r *ConcertRepository) GetConcertByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (domain.Concert, error) {
 	ctx, cancel := context.WithTimeout(ctx, r.pool.OpTimeout())
 	defer cancel()
+
+	logger := core_logger.FromContext(ctx)
 
 	query := baseConcertSelect + ` WHERE c.concert_id = $1 AND c.deleted_at IS NULL`
 
@@ -54,8 +58,29 @@ func (r *ConcertRepository) GetConcertByID(ctx context.Context, id uuid.UUID) (d
 		}
 		return domain.Concert{}, fmt.Errorf("scan concert: %w", err)
 	}
+	concert := rec.MapToDomain()
 
-	return rec.MapToDomain(), nil
+	if userID != uuid.Nil {
+		var status string
+		reviewQuery := `
+			SELECT status 
+			FROM reviews 
+			WHERE concert_id = $1 AND user_id = $2 AND deleted_at IS NULL 
+			LIMIT 1
+		`
+		err := r.pool.QueryRow(ctx, reviewQuery, id, userID).Scan(&status)
+
+		if err != nil {
+			if !errors.Is(err, pgx.ErrNoRows) {
+				logger.Debug("failed to fetch user review status: %v\n", zap.Error(err))
+			}
+		} else {
+			s := domain.ModerationStatus(status)
+			concert.UserReviewStatus = &s
+		}
+	}
+
+	return concert, nil
 }
 
 func (r *ConcertRepository) GetConcerts(

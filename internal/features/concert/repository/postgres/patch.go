@@ -76,7 +76,7 @@ func (r *ConcertRepository) UpdateConcert(ctx context.Context, id uuid.UUID, pat
 		if len(setValues) == 0 {
 			// No updates, just fetch current concert
 			var err error
-			result, err = r.GetConcertByID(txCtx, id)
+			result, err = r.GetConcertByID(txCtx, id, uuid.Nil)
 			return err
 		}
 
@@ -94,7 +94,7 @@ func (r *ConcertRepository) UpdateConcert(ctx context.Context, id uuid.UUID, pat
 		}
 
 		var err2 error
-		result, err2 = r.GetConcertByID(txCtx, id)
+		result, err2 = r.GetConcertByID(txCtx, id, uuid.Nil)
 		return err2
 	})
 

@@ -38,12 +38,12 @@ func (s *ConcertService) GetConcerts(
 	return s.concertRepository.GetConcerts(ctx, cityID, artistID, search, sort, direction, limit, offset)
 }
 
-func (s *ConcertService) GetConcertByID(ctx context.Context, id uuid.UUID) (domain.Concert, error) {
+func (s *ConcertService) GetConcertByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (domain.Concert, error) {
 	if id == uuid.Nil {
 		return domain.Concert{}, fmt.Errorf("invalid uuid: %w", core_errors.ErrInvalidArgument)
 	}
 
-	concert, err := s.concertRepository.GetConcertByID(ctx, id)
+	concert, err := s.concertRepository.GetConcertByID(ctx, id, userID)
 	if err != nil {
 		return domain.Concert{}, err
 	}

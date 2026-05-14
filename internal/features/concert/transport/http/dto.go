@@ -64,15 +64,16 @@ type ConcertStatsResponse struct {
 }
 
 type ConcertResponse struct {
-	ID         string                `json:"id"`
-	Title      string                `json:"title"`
-	Date       string                `json:"date"`
-	PosterURL  string                `json:"poster_url,omitempty"` // Тут будет лежать KEY
-	IsVerified bool                  `json:"is_verified"`
-	Venue      VenueBriefResponse    `json:"venue"`
-	Artists    []ArtistBriefResponse `json:"artists"`
-	Stats      *ConcertStatsResponse `json:"stats,omitempty"` // Вложенная структура
-	CreatedAt  string                `json:"created_at"`
+	ID               string                `json:"id"`
+	Title            string                `json:"title"`
+	Date             string                `json:"date"`
+	PosterURL        string                `json:"poster_url,omitempty"` // Тут будет лежать KEY
+	IsVerified       bool                  `json:"is_verified"`
+	Venue            VenueBriefResponse    `json:"venue"`
+	Artists          []ArtistBriefResponse `json:"artists"`
+	Stats            *ConcertStatsResponse `json:"stats,omitempty"` // Вложенная структура
+	CreatedAt        string                `json:"created_at"`
+	UserReviewStatus *string               `json:"user_review_status,omitempty"`
 }
 
 type ListConcertsResponse struct {
@@ -122,5 +123,5 @@ type ConcertResponseAdmin struct {
 
 type ListConcertsAdminResponse struct {
 	Items     []ConcertResponseAdmin `json:"items"`
-	PageCount int                  `json:"page_count"`
+	PageCount int                    `json:"page_count"`
 }

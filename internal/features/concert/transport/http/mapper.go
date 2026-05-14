@@ -88,6 +88,10 @@ func MapDomainToConcertResponse(c domain.Concert) ConcertResponse {
 		}
 	}
 
+	if c.UserReviewStatus != nil {
+		resp.UserReviewStatus = (*string)(c.UserReviewStatus)
+	}
+
 	return resp
 }
 
