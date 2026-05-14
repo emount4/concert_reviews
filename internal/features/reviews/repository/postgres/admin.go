@@ -100,3 +100,17 @@ func (r *ReviewRepository) ApproveReview(
 		return nil
 	})
 }
+
+func (r *ReviewRepository) RejectReview(ctx context.Context, id, moderatorID uuid.UUID, reason string) error {
+	query := `
+		UPDATE reviews 
+		SET status = 'rejected', 
+		    rejection_reason = $1, 
+		    moderated_by_user_id = $2,
+            is_visible = false,
+		    updated_at = NOW()
+		WHERE review_id = $3
+	`
+	_, err := r.pool.Exec(ctx, query, reason, moderatorID, id)
+	return err
+}

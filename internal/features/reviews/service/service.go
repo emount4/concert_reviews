@@ -41,6 +41,7 @@ type ReviewRepository interface {
 		allowedMediaIDs []uuid.UUID,
 		rev domain.Review,
 	) error
+	RejectReview(ctx context.Context, id, moderatorID uuid.UUID, reason string) error
 
 	CreateLike(ctx context.Context, reviewID, userID uuid.UUID) error
 	DeleteLike(ctx context.Context, reviewID, userID uuid.UUID) error

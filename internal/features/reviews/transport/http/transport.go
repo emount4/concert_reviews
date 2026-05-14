@@ -22,10 +22,12 @@ type ReviewService interface {
 		ctx context.Context,
 		id uuid.UUID,
 		moderatorID uuid.UUID,
-		finalTitle string, // Добавили заголовок
+		finalTitle string,
 		finalText string,
 		allowedMediaIDs []uuid.UUID,
 	) (domain.Review, error)
+
+	RejectReview(ctx context.Context, id, moderatorID uuid.UUID, reason string) error
 }
 
 type ReviewHTTPHandler struct {

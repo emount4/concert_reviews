@@ -81,3 +81,7 @@ type ApproveReviewRequest struct {
 	FinalText       string      `json:"final_text" validate:"required,min=100,max=8000"`
 	AllowedMediaIDs []uuid.UUID `json:"allowed_media_ids"`
 }
+
+type RejectReviewRequest struct {
+	Reason string `json:"rejection_reason" validate:"required,min=5,max=500"`
+}
