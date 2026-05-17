@@ -39,12 +39,11 @@ func MapCreateRequestToDomain(req CreateReviewRequest, userID uuid.UUID) domain.
 // MapDomainToReviewResponse — маппинг из Domain в Response DTO
 func MapDomainToReviewResponse(r domain.Review) ReviewResponse {
 	resp := ReviewResponse{
-		ReviewID:  r.ReviewID,
-		UserID:    r.UserID,
-		ConcertID: r.ConcertID,
-		Title:     r.Title,
-		Text:      r.Text,
-		// OriginalText:      r.OriginalText,
+		ReviewID:          r.ReviewID,
+		UserID:            r.UserID,
+		ConcertID:         r.ConcertID,
+		Title:             r.Title,
+		Text:              r.Text,
 		P1:                r.P1,
 		P2:                r.P2,
 		P3:                r.P3,
@@ -57,16 +56,21 @@ func MapDomainToReviewResponse(r domain.Review) ReviewResponse {
 		IsVisible:         r.IsVisible,
 		CreatedAt:         r.CreatedAt.Format(time.RFC3339),
 
-		// Автор (используем поля из твоей структуры User)
 		Author: AuthorBriefResponse{
 			ID:        r.UserID,
-			Username:  r.AuthorName, // Поле AuthorName заполняется в репозитории через JOIN
+			Username:  r.AuthorName,
 			AvatarURL: r.AuthorAvatar,
 		},
 
 		ConcertTitle: r.ConcertTitle,
-		LikesCount:   r.LikesCount,
-		IsLikedByMe:  r.IsLikedByMe,
+		Concert: ReviewConcertResponse{
+			ID:        r.ConcertID,
+			Title:     r.ConcertTitle,
+			PosterURL: r.ConcertPosterURL,
+			Artists:   []ConcertArtistBriefResponse{},
+		},
+		LikesCount:  r.LikesCount,
+		IsLikedByMe: r.IsLikedByMe,
 	}
 
 	if r.DeletedAt != nil {
@@ -87,6 +91,19 @@ func MapDomainToReviewResponse(r domain.Review) ReviewResponse {
 				Status:    string(m.Status),
 				CreatedAt: m.CreatedAt.Format(time.RFC3339),
 			}
+		}
+	}
+
+	if len(r.ConcertArtists) > 0 {
+		resp.Concert.Artists = make([]ConcertArtistBriefResponse, 0, len(r.ConcertArtists))
+		for _, a := range r.ConcertArtists {
+			if !a.IsMain {
+				continue
+			}
+			resp.Concert.Artists = append(resp.Concert.Artists, ConcertArtistBriefResponse{
+				ID:   a.ArtistID,
+				Name: a.Name,
+			})
 		}
 	}
 

@@ -17,6 +17,7 @@ const baseReviewSelect = `
 		r.*,
 		u.username as author_name, u.avatar_url as author_avatar,
 		c.title as concert_title,
+		c.poster_url as concert_poster_url,
 		(SELECT COUNT(*) FROM review_likes WHERE review_id = r.review_id) as likes_count,
 		COUNT(*) OVER() as total_count,
 		(
@@ -28,7 +29,17 @@ const baseReviewSelect = `
 			))
 			FROM review_media rm
 			WHERE rm.review_id = r.review_id AND rm.status = 'approved'
-		) as media_json
+		) as media_json,
+		(
+			SELECT COALESCE(jsonb_agg(jsonb_build_object(
+				'ArtistID', a.artist_id,
+				'Name', a.name,
+				'IsMain', ca.is_main
+			)), '[]'::jsonb)
+			FROM concert_artists ca
+			JOIN artists a ON a.artist_id = ca.artist_id
+			WHERE ca.concert_id = r.concert_id AND ca.is_main = true
+		) as concert_artists_json
 	FROM reviews r
 	JOIN users u ON r.user_id = u.user_id
 	JOIN concerts c ON r.concert_id = c.concert_id
@@ -116,7 +127,7 @@ func (r *ReviewRepository) GetReviews(
 			&rec.Status, &rec.RejectionReason, &rec.ModeratedByUserID, &rec.IsVisible,
 			&rec.CreatedAt, &rec.DeletedAt,
 			&rec.AuthorName, &rec.AuthorAvatar,
-			&rec.ConcertTitle, &rec.LikesCount, &rec.TotalCount, &rec.MediaJSON,
+			&rec.ConcertTitle, &rec.ConcertPosterURL, &rec.LikesCount, &rec.TotalCount, &rec.MediaJSON, &rec.ConcertArtistsJSON,
 			&rec.IsLikedByMe,
 		)
 		if err != nil {
@@ -143,6 +154,7 @@ func (r *ReviewRepository) GetPendingReviews(
 			r.*,
 			u.username as author_name, u.avatar_url as author_avatar,
 			c.title as concert_title,
+			c.poster_url as concert_poster_url,
 			(SELECT COUNT(*) FROM review_likes WHERE review_id = r.review_id) as likes_count,
 			COUNT(*) OVER() as total_count,
 			(
@@ -154,7 +166,17 @@ func (r *ReviewRepository) GetPendingReviews(
 				))
 				FROM review_media rm
 				WHERE rm.review_id = r.review_id -- Убрали фильтр по status = 'approved'
-			) as media_json
+			) as media_json,
+			(
+				SELECT COALESCE(jsonb_agg(jsonb_build_object(
+					'ArtistID', a.artist_id,
+					'Name', a.name,
+					'IsMain', ca.is_main
+				)), '[]'::jsonb)
+				FROM concert_artists ca
+				JOIN artists a ON a.artist_id = ca.artist_id
+				WHERE ca.concert_id = r.concert_id AND ca.is_main = true
+			) as concert_artists_json
 		FROM reviews r
 		JOIN users u ON r.user_id = u.user_id
 		JOIN concerts c ON r.concert_id = c.concert_id
@@ -187,7 +209,7 @@ func (r *ReviewRepository) GetPendingReviews(
 			&rec.Status, &rec.RejectionReason, &rec.ModeratedByUserID, &rec.IsVisible,
 			&rec.CreatedAt, &rec.DeletedAt,
 			&rec.AuthorName, &rec.AuthorAvatar,
-			&rec.ConcertTitle, &rec.LikesCount, &rec.TotalCount, &rec.MediaJSON,
+			&rec.ConcertTitle, &rec.ConcertPosterURL, &rec.LikesCount, &rec.TotalCount, &rec.MediaJSON, &rec.ConcertArtistsJSON,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scan pending review: %w", err)
@@ -227,6 +249,7 @@ func (r *ReviewRepository) GetReviewByID(ctx context.Context, id uuid.UUID) (dom
 			r.created_at, r.deleted_at,
 			u.username as author_name, u.avatar_url as author_avatar,
 			c.title as concert_title,
+			c.poster_url as concert_poster_url,
 			(SELECT COUNT(*) FROM review_likes WHERE review_id = r.review_id) as likes_count,
 			(
 				SELECT COALESCE(jsonb_agg(jsonb_build_object(
@@ -240,7 +263,17 @@ func (r *ReviewRepository) GetReviewByID(ctx context.Context, id uuid.UUID) (dom
 				)), '[]'::jsonb)
 				FROM review_media rm
 				WHERE rm.review_id = r.review_id
-			) as media_json
+			) as media_json,
+			(
+				SELECT COALESCE(jsonb_agg(jsonb_build_object(
+					'ArtistID', a.artist_id,
+					'Name', a.name,
+					'IsMain', ca.is_main
+				)), '[]'::jsonb)
+				FROM concert_artists ca
+				JOIN artists a ON a.artist_id = ca.artist_id
+				WHERE ca.concert_id = r.concert_id AND ca.is_main = true
+			) as concert_artists_json
 		FROM reviews r
 		JOIN users u ON r.user_id = u.user_id
 		JOIN concerts c ON r.concert_id = c.concert_id
@@ -254,8 +287,8 @@ func (r *ReviewRepository) GetReviewByID(ctx context.Context, id uuid.UUID) (dom
 		&rec.Status, &rec.RejectionReason, &rec.ModeratedByUserID, &rec.IsVisible,
 		&rec.CreatedAt, &rec.DeletedAt,
 		&rec.AuthorName, &rec.AuthorAvatar,
-		&rec.ConcertTitle, &rec.LikesCount,
-		&rec.MediaJSON,
+		&rec.ConcertTitle, &rec.ConcertPosterURL, &rec.LikesCount,
+		&rec.MediaJSON, &rec.ConcertArtistsJSON,
 	)
 
 	if err != nil {
@@ -267,4 +300,80 @@ func (r *ReviewRepository) GetReviewByID(ctx context.Context, id uuid.UUID) (dom
 
 	// Вызываем твой маппер из record в domain
 	return rec.MapToDomain(), nil
+}
+
+func (r *ReviewRepository) GetUserReviews(ctx context.Context, userID uuid.UUID, includeStatuses []string) ([]domain.Review, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.pool.OpTimeout())
+	defer cancel()
+
+	if len(includeStatuses) == 0 {
+		includeStatuses = []string{"approved"}
+	}
+
+	// Строим список статусов для фильтра
+	statusCondition := "r.status = ANY($2)"
+
+	query := `
+		SELECT 
+			r.*,
+			u.username as author_name, u.avatar_url as author_avatar,
+			c.title as concert_title,
+			c.poster_url as concert_poster_url,
+			(SELECT COUNT(*) FROM review_likes WHERE review_id = r.review_id) as likes_count,
+			(
+				SELECT jsonb_agg(jsonb_build_object(
+					'MediaID', rm.media_id,
+					'MediaURL', rm.media_url,
+					'MediaType', rm.media_type,
+					'Status', rm.status
+				))
+				FROM review_media rm
+				WHERE rm.review_id = r.review_id AND rm.status = 'approved'
+			) as media_json,
+			(
+				SELECT COALESCE(jsonb_agg(jsonb_build_object(
+					'ArtistID', a.artist_id,
+					'Name', a.name,
+					'IsMain', ca.is_main
+				)), '[]'::jsonb)
+				FROM concert_artists ca
+				JOIN artists a ON a.artist_id = ca.artist_id
+				WHERE ca.concert_id = r.concert_id AND ca.is_main = true
+			) as concert_artists_json
+		FROM reviews r
+		JOIN users u ON r.user_id = u.user_id
+		JOIN concerts c ON r.concert_id = c.concert_id
+		WHERE r.user_id = $1 AND ` + statusCondition + ` AND r.deleted_at IS NULL
+		ORDER BY r.created_at DESC
+	`
+
+	rows, err := r.pool.Query(ctx, query, userID, includeStatuses)
+	if err != nil {
+		return nil, fmt.Errorf("query user reviews: %w", err)
+	}
+	defer rows.Close()
+
+	var reviews []domain.Review
+	for rows.Next() {
+		var rec reviewRecord
+		err := rows.Scan(
+			&rec.ReviewID, &rec.UserID, &rec.ConcertID, &rec.Title, &rec.Text, &rec.OriginalText,
+			&rec.P1, &rec.P2, &rec.P3, &rec.P4, &rec.P5, &rec.RatingTotal,
+			&rec.Status, &rec.RejectionReason, &rec.ModeratedByUserID, &rec.IsVisible,
+			&rec.CreatedAt, &rec.DeletedAt,
+			&rec.AuthorName, &rec.AuthorAvatar,
+			&rec.ConcertTitle, &rec.ConcertPosterURL, &rec.LikesCount,
+			&rec.MediaJSON, &rec.ConcertArtistsJSON,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan user review: %w", err)
+		}
+
+		reviews = append(reviews, rec.MapToDomain())
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate user reviews rows: %w", err)
+	}
+
+	return reviews, nil
 }

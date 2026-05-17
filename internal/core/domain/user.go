@@ -35,6 +35,15 @@ type User struct {
 
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+
+	Stats *UserStats
+}
+
+type UserStats struct {
+	ReviewsCount       int
+	LikesGivenCount    int
+	LikesReceivedCount int
+	UpdatedAt          time.Time
 }
 
 func NewUser(username, email string) User {

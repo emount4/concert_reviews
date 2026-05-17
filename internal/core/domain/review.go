@@ -42,12 +42,14 @@ type Review struct {
 	DeletedAt         *time.Time
 
 	// Поля обогащения (заполняются репозиторием через JOIN)
-	AuthorName   string
-	AuthorAvatar *string
-	ConcertTitle string
-	Media        []ReviewMedia
-	LikesCount   int
-	IsLikedByMe  bool
+	AuthorName       string
+	AuthorAvatar     *string
+	ConcertTitle     string
+	ConcertPosterURL *string
+	ConcertArtists   []ConcertArtist
+	Media            []ReviewMedia
+	LikesCount       int
+	IsLikedByMe      bool
 }
 
 // ReviewMedia представляет файл, прикрепленный к рецензии

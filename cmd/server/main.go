@@ -35,6 +35,9 @@ import (
 	stats_redis_repository "github.com/emount4/concert_reviews/internal/features/stats/repository/redis"
 	stats_service "github.com/emount4/concert_reviews/internal/features/stats/service"
 	stats_transport_http "github.com/emount4/concert_reviews/internal/features/stats/transport/http"
+	user_postgres_repository "github.com/emount4/concert_reviews/internal/features/user/repository/postgres"
+	user_service "github.com/emount4/concert_reviews/internal/features/user/service"
+	user_transport_http "github.com/emount4/concert_reviews/internal/features/user/transport/http"
 	venue_postgres_repository "github.com/emount4/concert_reviews/internal/features/venues/repository/postgres"
 	venue_service "github.com/emount4/concert_reviews/internal/features/venues/service"
 	venue_transport_http "github.com/emount4/concert_reviews/internal/features/venues/transport/http"
@@ -140,12 +143,20 @@ func main() {
 	reviewRoutes := reviewHTTPHandler.Routes()
 	applyRouteAccessPolicy(reviewRoutes, jwtManager)
 
+	logger.Debug("initializing features", zap.String("features", "users"))
+	userRepository := user_postgres_repository.NewReviewRepository(pool, txManager)
+	userService := user_service.NewUserService(userRepository, reviewRepository)
+	userHTTPHandler := user_transport_http.NewUsersHTTPHandler(userService)
+	userRoutes := userHTTPHandler.Routes()
+	applyRouteAccessPolicy(userRoutes, jwtManager)
+
 	allowedExt := map[string]bool{
 		".jpg":  true,
 		".jpeg": true,
 		".png":  true,
 		".webp": true,
 		".gif":  true,
+		".mp4":  true,
 	}
 	logger.Debug("initializing features", zap.String("features", "media"))
 	mediaService := media_service.NewMediaService(
@@ -168,6 +179,7 @@ func main() {
 	apiVersionRouter.RigisterRoutes(venueRoutes...)
 	apiVersionRouter.RigisterRoutes(concertRoutes...)
 	apiVersionRouter.RigisterRoutes(reviewRoutes...)
+	apiVersionRouter.RigisterRoutes(userRoutes...)
 
 	httpConfig := core_http_server.NewConfigMust()
 

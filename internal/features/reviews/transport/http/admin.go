@@ -60,10 +60,23 @@ func (h *ReviewHTTPHandler) RejectReview(rw http.ResponseWriter, r *http.Request
 	ctx := r.Context()
 	res := core_http_response.NewHTTPResponseHandler(core_logger.FromContext(ctx), rw)
 
-	moderatorID, _ := core_http_middleware.GetUserID(ctx)
+	moderatorID, err := core_http_middleware.GetUserID(ctx)
+	if err != nil {
+		res.ErrorResponse(err, "unauthorized")
+		return
+	}
 
-	idStr, _ := core_http_request.GetStringPathValue(r, "id")
-	reviewID, _ := uuid.Parse(idStr)
+	idStr, err := core_http_request.GetStringPathValue(r, "id")
+	if err != nil {
+		res.ErrorResponse(err, "missing review id")
+		return
+	}
+
+	reviewID, err := uuid.Parse(idStr)
+	if err != nil {
+		res.ErrorResponse(err, "invalid review uuid format")
+		return
+	}
 
 	var req RejectReviewRequest
 	if err := core_http_request.DecodeAndValidateRequest(r, &req); err != nil {
@@ -73,6 +86,36 @@ func (h *ReviewHTTPHandler) RejectReview(rw http.ResponseWriter, r *http.Request
 
 	if err := h.reviewService.RejectReview(ctx, reviewID, moderatorID, req.Reason); err != nil {
 		res.ErrorResponse(err, "failed to reject review")
+		return
+	}
+
+	res.JSONResponse(nil, http.StatusNoContent)
+}
+
+func (h *ReviewHTTPHandler) ReturnReviewToPending(rw http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	res := core_http_response.NewHTTPResponseHandler(core_logger.FromContext(ctx), rw)
+
+	moderatorID, err := core_http_middleware.GetUserID(ctx)
+	if err != nil {
+		res.ErrorResponse(err, "unauthorized")
+		return
+	}
+
+	idStr, err := core_http_request.GetStringPathValue(r, "id")
+	if err != nil {
+		res.ErrorResponse(err, "missing review id")
+		return
+	}
+
+	reviewID, err := uuid.Parse(idStr)
+	if err != nil {
+		res.ErrorResponse(err, "invalid review uuid format")
+		return
+	}
+
+	if err := h.reviewService.ReturnReviewToPending(ctx, reviewID, moderatorID); err != nil {
+		res.ErrorResponse(err, "failed to return review to pending")
 		return
 	}
 

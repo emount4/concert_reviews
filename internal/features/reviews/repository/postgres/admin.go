@@ -107,10 +107,22 @@ func (r *ReviewRepository) RejectReview(ctx context.Context, id, moderatorID uui
 		SET status = 'rejected', 
 		    rejection_reason = $1, 
 		    moderated_by_user_id = $2,
-            is_visible = false,
-		    updated_at = NOW()
+		    is_visible = false
 		WHERE review_id = $3
 	`
 	_, err := r.pool.Exec(ctx, query, reason, moderatorID, id)
+	return err
+}
+
+func (r *ReviewRepository) ReturnReviewToPending(ctx context.Context, id, _ uuid.UUID) error {
+	query := `
+		UPDATE reviews
+		SET status = 'pending',
+		    rejection_reason = NULL,
+		    moderated_by_user_id = NULL,
+		    is_visible = true
+		WHERE review_id = $1
+	`
+	_, err := r.pool.Exec(ctx, query, id)
 	return err
 }

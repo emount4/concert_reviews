@@ -46,3 +46,12 @@ func (s *ReviewService) RejectReview(ctx context.Context, id, moderatorID uuid.U
 
 	return nil
 }
+
+func (s *ReviewService) ReturnReviewToPending(ctx context.Context, id, moderatorID uuid.UUID) error {
+	err := s.reviewRepository.ReturnReviewToPending(ctx, id, moderatorID)
+	if err != nil {
+		return fmt.Errorf("repository return to pending failed: %w", err)
+	}
+
+	return nil
+}

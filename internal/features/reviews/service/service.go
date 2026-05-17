@@ -42,11 +42,13 @@ type ReviewRepository interface {
 		rev domain.Review,
 	) error
 	RejectReview(ctx context.Context, id, moderatorID uuid.UUID, reason string) error
+	ReturnReviewToPending(ctx context.Context, id, moderatorID uuid.UUID) error
 
 	CreateLike(ctx context.Context, reviewID, userID uuid.UUID) error
 	DeleteLike(ctx context.Context, reviewID, userID uuid.UUID) error
 
 	GetUserReviewCount(ctx context.Context, userID uuid.UUID) (int, error)
+	GetUserReviews(ctx context.Context, userID uuid.UUID, includeStatuses []string) ([]domain.Review, error)
 }
 
 type ReviewRedisRepository interface {
