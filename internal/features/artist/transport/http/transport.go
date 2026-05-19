@@ -60,7 +60,7 @@ func (h *ArtistHTTPHandler) Routes() []core_http_server.Route {
 		},
 		{
 			Method:  http.MethodPatch,
-			Path:    "/artists/{id}",
+			Path:    "/admin/artists/{id}",
 			Handler: h.PatchArtist,
 			Access:  core_http_server.AccessAdminOnly,
 		},

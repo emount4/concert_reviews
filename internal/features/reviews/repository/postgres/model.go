@@ -29,15 +29,17 @@ type reviewRecord struct {
 	DeletedAt         *time.Time `db:"deleted_at"`
 
 	// Поля из JOIN
-	AuthorName   string  `db:"author_name"`
-	AuthorAvatar *string `db:"author_avatar"`
-	ConcertTitle string  `db:"concert_title"`
-	LikesCount   int     `db:"likes_count"`
-	IsLikedByMe  bool    `db:"is_liked_by_me"`
-	TotalCount   int     `db:"total_count"` // Для пагинации
+	AuthorName       string  `db:"author_name"`
+	AuthorAvatar     *string `db:"author_avatar"`
+	ConcertTitle     string  `db:"concert_title"`
+	ConcertPosterURL *string `db:"concert_poster_url"`
+	LikesCount       int     `db:"likes_count"`
+	IsLikedByMe      bool    `db:"is_liked_by_me"`
+	TotalCount       int     `db:"total_count"` // Для пагинации
 
 	// Вложенные медиа (JSON агрегация)
-	MediaJSON []byte `db:"media_json"`
+	MediaJSON          []byte `db:"media_json"`
+	ConcertArtistsJSON []byte `db:"concert_artists_json"`
 }
 
 func (r reviewRecord) MapToDomain() domain.Review {
@@ -63,6 +65,7 @@ func (r reviewRecord) MapToDomain() domain.Review {
 		AuthorName:        r.AuthorName,
 		AuthorAvatar:      r.AuthorAvatar,
 		ConcertTitle:      r.ConcertTitle,
+		ConcertPosterURL:  r.ConcertPosterURL,
 		LikesCount:        r.LikesCount,
 		IsLikedByMe:       r.IsLikedByMe,
 	}
@@ -71,6 +74,12 @@ func (r reviewRecord) MapToDomain() domain.Review {
 		var media []domain.ReviewMedia
 		_ = json.Unmarshal(r.MediaJSON, &media)
 		rev.Media = media
+	}
+
+	if len(r.ConcertArtistsJSON) > 0 {
+		var artists []domain.ConcertArtist
+		_ = json.Unmarshal(r.ConcertArtistsJSON, &artists)
+		rev.ConcertArtists = artists
 	}
 
 	return rev

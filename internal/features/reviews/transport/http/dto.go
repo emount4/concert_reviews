@@ -36,13 +36,24 @@ type ReviewMediaResponse struct {
 	CreatedAt string    `json:"created_at"`
 }
 
+type ConcertArtistBriefResponse struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+type ReviewConcertResponse struct {
+	ID        uuid.UUID                    `json:"id"`
+	Title     string                       `json:"title"`
+	PosterURL *string                      `json:"poster_url,omitempty"`
+	Artists   []ConcertArtistBriefResponse `json:"artists"`
+}
+
 type ReviewResponse struct {
-	ReviewID  uuid.UUID `json:"review_id"`
-	UserID    uuid.UUID `json:"user_id"`
-	ConcertID uuid.UUID `json:"concert_id"`
-	Title     string    `json:"title"`
-	Text      string    `json:"text"`
-	// OriginalText      *string    `json:"original_text"`
+	ReviewID          uuid.UUID  `json:"review_id"`
+	UserID            uuid.UUID  `json:"user_id"`
+	ConcertID         uuid.UUID  `json:"concert_id"`
+	Title             string     `json:"title"`
+	Text              string     `json:"text"`
 	P1                int        `json:"p1"`
 	P2                int        `json:"p2"`
 	P3                int        `json:"p3"`
@@ -59,6 +70,7 @@ type ReviewResponse struct {
 	// Обогащение для фронта (Author и Media)
 	Author       AuthorBriefResponse   `json:"author"`
 	ConcertTitle string                `json:"concert_title,omitempty"`
+	Concert      ReviewConcertResponse `json:"concert"`
 	Media        []ReviewMediaResponse `json:"media,omitempty"`
 	LikesCount   int                   `json:"likes_count"`
 	IsLikedByMe  bool                  `json:"is_liked_by_me"`
@@ -80,4 +92,8 @@ type ApproveReviewRequest struct {
 	FinalTitle      string      `json:"final_title" validate:"required,max=255"`
 	FinalText       string      `json:"final_text" validate:"required,min=100,max=8000"`
 	AllowedMediaIDs []uuid.UUID `json:"allowed_media_ids"`
+}
+
+type RejectReviewRequest struct {
+	Reason string `json:"rejection_reason" validate:"required,min=5,max=500"`
 }

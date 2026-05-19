@@ -22,10 +22,13 @@ type ReviewService interface {
 		ctx context.Context,
 		id uuid.UUID,
 		moderatorID uuid.UUID,
-		finalTitle string, // Добавили заголовок
+		finalTitle string,
 		finalText string,
 		allowedMediaIDs []uuid.UUID,
 	) (domain.Review, error)
+
+	RejectReview(ctx context.Context, id, moderatorID uuid.UUID, reason string) error
+	ReturnReviewToPending(ctx context.Context, id, moderatorID uuid.UUID) error
 }
 
 type ReviewHTTPHandler struct {
@@ -84,6 +87,18 @@ func (h *ReviewHTTPHandler) Routes() []core_http_server.Route {
 			Method:  http.MethodPost,
 			Path:    "/review/{id}/approve",
 			Handler: h.ApproveReview,
+			Access:  core_http_server.AccessAdminOnly,
+		},
+		{
+			Method:  http.MethodPost,
+			Path:    "/review/{id}/reject",
+			Handler: h.RejectReview,
+			Access:  core_http_server.AccessAdminOnly,
+		},
+		{
+			Method:  http.MethodPost,
+			Path:    "/review/{id}/pending",
+			Handler: h.ReturnReviewToPending,
 			Access:  core_http_server.AccessAdminOnly,
 		},
 	}

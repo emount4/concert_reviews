@@ -67,27 +67,37 @@ func (r *ReviewRepository) ApproveReview(
 		// 4. СТАТИСТИКА АРТИСТОВ (Всех основных артистов концерта)
 		queryArtists := `
 			UPDATE artist_stats SET 
-				sum_rating_total = sum_rating_total + $1,
+				sum_p1 = sum_p1 + $1,
+				sum_p2 = sum_p2 + $2,
+				sum_p3 = sum_p3 + $3,
+				sum_p4 = sum_p4 + $4,
+				sum_p5 = sum_p5 + $5,
+				sum_rating_total = sum_rating_total + $6,
 				reviews_count = reviews_count + 1,
 				updated_at = NOW()
 			WHERE artist_id IN (
 				SELECT artist_id FROM concert_artists 
-				WHERE concert_id = $2 AND is_main = TRUE
+				WHERE concert_id = $7 AND is_main = TRUE
 			)
 		`
-		if _, err := exec.Exec(txCtx, queryArtists, rev.RatingTotal, rev.ConcertID); err != nil {
+		if _, err := exec.Exec(txCtx, queryArtists, rev.P1, rev.P2, rev.P3, rev.P4, rev.P5, rev.RatingTotal, rev.ConcertID); err != nil {
 			return fmt.Errorf("update artists stats: %w", err)
 		}
 
 		// 5. СТАТИСТИКА ПЛОЩАДКИ
 		queryVenue := `
 			UPDATE venue_stats SET 
-				sum_rating_total = sum_rating_total + $1,
+				sum_p1 = sum_p1 + $1,
+				sum_p2 = sum_p2 + $2,
+				sum_p3 = sum_p3 + $3,
+				sum_p4 = sum_p4 + $4,
+				sum_p5 = sum_p5 + $5,
+				sum_rating_total = sum_rating_total + $6,
 				reviews_count = reviews_count + 1,
 				updated_at = NOW()
-			WHERE venue_id = (SELECT venue_id FROM concerts WHERE concert_id = $2)
+			WHERE venue_id = (SELECT venue_id FROM concerts WHERE concert_id = $7)
 		`
-		if _, err := exec.Exec(txCtx, queryVenue, rev.RatingTotal, rev.ConcertID); err != nil {
+		if _, err := exec.Exec(txCtx, queryVenue, rev.P1, rev.P2, rev.P3, rev.P4, rev.P5, rev.RatingTotal, rev.ConcertID); err != nil {
 			return fmt.Errorf("update venue stats: %w", err)
 		}
 
@@ -99,4 +109,30 @@ func (r *ReviewRepository) ApproveReview(
 
 		return nil
 	})
+}
+
+func (r *ReviewRepository) RejectReview(ctx context.Context, id, moderatorID uuid.UUID, reason string) error {
+	query := `
+		UPDATE reviews 
+		SET status = 'rejected', 
+		    rejection_reason = $1, 
+		    moderated_by_user_id = $2,
+		    is_visible = false
+		WHERE review_id = $3
+	`
+	_, err := r.pool.Exec(ctx, query, reason, moderatorID, id)
+	return err
+}
+
+func (r *ReviewRepository) ReturnReviewToPending(ctx context.Context, id, _ uuid.UUID) error {
+	query := `
+		UPDATE reviews
+		SET status = 'pending',
+		    rejection_reason = NULL,
+		    moderated_by_user_id = NULL,
+		    is_visible = true
+		WHERE review_id = $1
+	`
+	_, err := r.pool.Exec(ctx, query, id)
+	return err
 }

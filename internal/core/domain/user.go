@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	core_errors "github.com/emount4/concert_reviews/internal/core/errors"
+	core_types "github.com/emount4/concert_reviews/internal/core/types"
 	"github.com/google/uuid"
 )
 
@@ -35,6 +36,36 @@ type User struct {
 
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+
+	Stats *UserStats
+}
+
+type UserStats struct {
+	ReviewsCount       int
+	LikesGivenCount    int
+	LikesReceivedCount int
+	UpdatedAt          time.Time
+}
+
+type ProfileModerationRequest struct {
+	ModerationID      int
+	UserID            uuid.UUID
+	Username          string
+	UserAvatarURL     *string
+	FieldName         string
+	OldValue          *string
+	NewValue          *string
+	Status            ModerationStatus
+	ModeratedByUserID *uuid.UUID
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+type UserPatch struct {
+	Username  core_types.Nullable[string]
+	Bio       core_types.Nullable[string]
+	AvatarKey core_types.Nullable[string]
+	BannerKey core_types.Nullable[string]
 }
 
 func NewUser(username, email string) User {
@@ -46,6 +77,45 @@ func NewUser(username, email string) User {
 		IsActive:        true,
 		IsBanned:        false,
 	}
+}
+
+func (p UserPatch) IsEmpty() bool {
+	return !p.Username.Set && !p.Bio.Set && !p.AvatarKey.Set && !p.BannerKey.Set
+}
+
+func (p *UserPatch) Validate() error {
+	if p.Username.Set && p.Username.Value == nil {
+		return fmt.Errorf("%w: username cannot be null", core_errors.ErrInvalidArgument)
+	}
+	return nil
+}
+
+func (u *User) ApplyPatch(patch UserPatch) error {
+	if err := patch.Validate(); err != nil {
+		return fmt.Errorf("validate user patch: %w", err)
+	}
+
+	tmp := *u
+
+	if patch.Username.Set {
+		tmp.Username = strings.TrimSpace(*patch.Username.Value)
+	}
+	if patch.Bio.Set {
+		tmp.Bio = patch.Bio.Value
+	}
+	if patch.AvatarKey.Set {
+		tmp.AvatarURL = patch.AvatarKey.Value
+	}
+	if patch.BannerKey.Set {
+		tmp.BannerURL = patch.BannerKey.Value
+	}
+
+	if err := tmp.Validate(); err != nil {
+		return fmt.Errorf("validate patched user: %w", err)
+	}
+
+	*u = tmp
+	return nil
 }
 
 func (u *User) Validate() error {
