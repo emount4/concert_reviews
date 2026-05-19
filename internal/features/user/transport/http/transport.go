@@ -15,8 +15,11 @@ type UserHTTPHandler struct {
 
 type UsersService interface {
 	GetMe(ctx context.Context, userID uuid.UUID) (domain.User, error)
+	UpdateMe(ctx context.Context, userID uuid.UUID, patch domain.UserPatch) (domain.User, error)
+	GetMyProfileModerationRequests(ctx context.Context, userID uuid.UUID, status *domain.ModerationStatus) ([]domain.ProfileModerationRequest, error)
 	GetProfileByUsername(ctx context.Context, username string) (domain.User, error)
-	GetUserReviews(ctx context.Context, userID uuid.UUID, includeStatuses []string) ([]domain.Review, error)
+	GetUserReviews(ctx context.Context, userID uuid.UUID, viewerID *uuid.UUID, includeStatuses []string) ([]domain.Review, error)
+	GetLikedReviews(ctx context.Context, userID uuid.UUID, viewerID *uuid.UUID, limit, offset *int) ([]domain.Review, int, error)
 }
 
 func NewUsersHTTPHandler(userService UsersService) *UserHTTPHandler {
@@ -32,6 +35,29 @@ func (h *UserHTTPHandler) Routes() []core_http_server.Route {
 			Path:    "/users/me",
 			Handler: h.GetMe,
 			Access:  core_http_server.AccessAuthOnly,
+		},
+		{
+			Method:  http.MethodPatch,
+			Path:    "/users/me",
+			Handler: h.PatchMe,
+			Access:  core_http_server.AccessAuthOnly,
+		},
+		{
+			Method:  http.MethodGet,
+			Path:    "/users/me/profile-moderation",
+			Handler: h.GetMyProfileModerationRequests,
+			Access:  core_http_server.AccessAuthOnly,
+		},
+		{
+			Method:  http.MethodGet,
+			Path:    "/users/me/liked-reviews",
+			Handler: h.GetLikedReviews,
+			Access:  core_http_server.AccessAuthOnly,
+		},
+		{
+			Method:  http.MethodGet,
+			Path:    "/users/{username}/liked-reviews",
+			Handler: h.GetUserLikedReviews,
 		},
 		{
 			Method:  http.MethodGet,

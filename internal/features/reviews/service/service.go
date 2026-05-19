@@ -48,7 +48,8 @@ type ReviewRepository interface {
 	DeleteLike(ctx context.Context, reviewID, userID uuid.UUID) error
 
 	GetUserReviewCount(ctx context.Context, userID uuid.UUID) (int, error)
-	GetUserReviews(ctx context.Context, userID uuid.UUID, includeStatuses []string) ([]domain.Review, error)
+	GetUserReviews(ctx context.Context, userID uuid.UUID, viewerID *uuid.UUID, includeStatuses []string) ([]domain.Review, error)
+	GetLikedReviews(ctx context.Context, userID uuid.UUID, viewerID *uuid.UUID, limit, offset *int) ([]domain.Review, int, error)
 }
 
 type ReviewRedisRepository interface {

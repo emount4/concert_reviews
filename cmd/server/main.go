@@ -27,6 +27,9 @@ import (
 	concert_postgres_repository "github.com/emount4/concert_reviews/internal/features/concert/repository/postgres"
 	concert_service "github.com/emount4/concert_reviews/internal/features/concert/service"
 	concert_transport_http "github.com/emount4/concert_reviews/internal/features/concert/transport/http"
+	favorites_postgres_repository "github.com/emount4/concert_reviews/internal/features/favorites/repository/postgres"
+	favorites_service "github.com/emount4/concert_reviews/internal/features/favorites/service"
+	favorites_transport_http "github.com/emount4/concert_reviews/internal/features/favorites/transport/http"
 	review_postgres_repository "github.com/emount4/concert_reviews/internal/features/reviews/repository/postgres"
 	review_redis_repository "github.com/emount4/concert_reviews/internal/features/reviews/repository/redis"
 	review_service "github.com/emount4/concert_reviews/internal/features/reviews/service"
@@ -44,6 +47,9 @@ import (
 
 	media_service "github.com/emount4/concert_reviews/internal/features/media/service"
 	media_transport_http "github.com/emount4/concert_reviews/internal/features/media/transport/http"
+	moderation_postgres_repository "github.com/emount4/concert_reviews/internal/features/moderation/repository/postgres"
+	moderation_service "github.com/emount4/concert_reviews/internal/features/moderation/service"
+	moderation_transport_http "github.com/emount4/concert_reviews/internal/features/moderation/transport/http"
 	"go.uber.org/zap"
 )
 
@@ -145,10 +151,17 @@ func main() {
 
 	logger.Debug("initializing features", zap.String("features", "users"))
 	userRepository := user_postgres_repository.NewReviewRepository(pool, txManager)
-	userService := user_service.NewUserService(userRepository, reviewRepository)
+	userService := user_service.NewUserService(userRepository, reviewRepository, s3Storage)
 	userHTTPHandler := user_transport_http.NewUsersHTTPHandler(userService)
 	userRoutes := userHTTPHandler.Routes()
 	applyRouteAccessPolicy(userRoutes, jwtManager)
+
+	logger.Debug("initializing features", zap.String("features", "favorites"))
+	favoritesRepository := favorites_postgres_repository.NewFavoritesRepository(pool, txManager)
+	favoritesService := favorites_service.NewFavoritesService(favoritesRepository)
+	favoritesTransportHTTP := favorites_transport_http.NewFavoritesHTTPHandler(favoritesService)
+	favoritesRoutes := favoritesTransportHTTP.Routes()
+	applyRouteAccessPolicy(favoritesRoutes, jwtManager)
 
 	allowedExt := map[string]bool{
 		".jpg":  true,
@@ -169,6 +182,13 @@ func main() {
 	mediaRoutes := mediaTransportHTTP.Routes()
 	applyRouteAccessPolicy(mediaRoutes, jwtManager)
 
+	logger.Debug("initializing features", zap.String("features", "moderation"))
+	moderationRepository := moderation_postgres_repository.NewModerationRepository(pool)
+	moderationService := moderation_service.NewModerationService(moderationRepository)
+	moderationTransportHTTP := moderation_transport_http.NewModerationHTTPHandler(moderationService)
+	moderationRoutes := moderationTransportHTTP.Routes()
+	applyRouteAccessPolicy(moderationRoutes, jwtManager)
+
 	apiVersionRouter := core_http_server.NewAPIVersionRouter(core_http_server.ApiVersion1)
 
 	apiVersionRouter.RigisterRoutes(authRoutes...)
@@ -180,6 +200,8 @@ func main() {
 	apiVersionRouter.RigisterRoutes(concertRoutes...)
 	apiVersionRouter.RigisterRoutes(reviewRoutes...)
 	apiVersionRouter.RigisterRoutes(userRoutes...)
+	apiVersionRouter.RigisterRoutes(favoritesRoutes...)
+	apiVersionRouter.RigisterRoutes(moderationRoutes...)
 
 	httpConfig := core_http_server.NewConfigMust()
 

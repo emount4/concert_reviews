@@ -45,8 +45,8 @@ func (s *UserService) GetProfileByUsername(ctx context.Context, username string)
 	return user, nil
 }
 
-func (s *UserService) GetUserReviews(ctx context.Context, userID uuid.UUID, includeStatuses []string) ([]domain.Review, error) {
-	reviews, err := s.reviewRepository.GetUserReviews(ctx, userID, includeStatuses)
+func (s *UserService) GetUserReviews(ctx context.Context, userID uuid.UUID, viewerID *uuid.UUID, includeStatuses []string) ([]domain.Review, error) {
+	reviews, err := s.reviewRepository.GetUserReviews(ctx, userID, viewerID, includeStatuses)
 	if err != nil {
 		return nil, fmt.Errorf("fetch user reviews from repository: %w", err)
 	}

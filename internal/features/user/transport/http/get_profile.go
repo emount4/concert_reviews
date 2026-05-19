@@ -4,8 +4,11 @@ import (
 	"net/http"
 
 	core_logger "github.com/emount4/concert_reviews/internal/core/logger"
+	core_http_middleware "github.com/emount4/concert_reviews/internal/core/transport/http/middleware"
 	core_http_request "github.com/emount4/concert_reviews/internal/core/transport/http/request"
 	core_http_response "github.com/emount4/concert_reviews/internal/core/transport/http/response"
+	review_transport_http "github.com/emount4/concert_reviews/internal/features/reviews/transport/http"
+	"github.com/google/uuid"
 )
 
 func (h *UserHTTPHandler) GetProfile(rw http.ResponseWriter, r *http.Request) {
@@ -26,32 +29,19 @@ func (h *UserHTTPHandler) GetProfile(rw http.ResponseWriter, r *http.Request) {
 
 	profileResp := MapDomainToPublicResponse(user)
 
-	// Получаем одобренные рецензии пользователя
-	reviews, err := h.usersService.GetUserReviews(ctx, user.ID, []string{"approved"})
+	var viewerID *uuid.UUID
+	if id, err := core_http_middleware.GetUserID(ctx); err == nil {
+		viewerID = &id
+	}
+
+	reviews, err := h.usersService.GetUserReviews(ctx, user.ID, viewerID, []string{"approved"})
 	if err != nil {
 		res.ErrorResponse(err, "failed to fetch user reviews")
 		return
 	}
 
-	// Маппируем рецензии для включения в ответ (только нужные поля, без причин отказа)
 	if len(reviews) > 0 {
-		profileResp.Reviews = make([]interface{}, len(reviews))
-		for i, rev := range reviews {
-			profileResp.Reviews[i] = map[string]interface{}{
-				"review_id":     rev.ReviewID,
-				"title":         rev.Title,
-				"text":          rev.Text,
-				"rating":        rev.RatingTotal,
-				"p1":            rev.P1,
-				"p2":            rev.P2,
-				"p3":            rev.P3,
-				"p4":            rev.P4,
-				"p5":            rev.P5,
-				"created_at":    rev.CreatedAt,
-				"concert_title": rev.ConcertTitle,
-				"likes_count":   rev.LikesCount,
-			}
-		}
+		profileResp.Reviews = review_transport_http.MapDomainListToReviewResponse(reviews).Items
 	}
 
 	res.JSONResponse(profileResp, http.StatusOK)

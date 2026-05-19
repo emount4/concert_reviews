@@ -2,6 +2,7 @@ package review_postgres_repository
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
@@ -140,7 +141,82 @@ func (r *ReviewRepository) GetReviews(
 	if err := rows.Err(); err != nil {
 		return nil, 0, fmt.Errorf("iterate reviews rows: %w", err)
 	}
+	reviews, err = r.attachMediaToReviews(ctx, reviews, false)
+	if err != nil {
+		return nil, 0, err
+	}
 	return reviews, total, nil
+}
+
+func (r *ReviewRepository) attachMediaToReviews(
+	ctx context.Context,
+	reviews []domain.Review,
+	includeAllStatuses bool,
+) ([]domain.Review, error) {
+	if len(reviews) == 0 {
+		return reviews, nil
+	}
+
+	reviewIDs := make([]uuid.UUID, 0, len(reviews))
+	seen := make(map[uuid.UUID]struct{}, len(reviews))
+	for _, review := range reviews {
+		if _, ok := seen[review.ReviewID]; ok {
+			continue
+		}
+		seen[review.ReviewID] = struct{}{}
+		reviewIDs = append(reviewIDs, review.ReviewID)
+	}
+
+	query := `
+		SELECT media_id, review_id, media_url, media_type, file_size, status, created_at
+		FROM review_media
+		WHERE review_id = ANY($1)
+	`
+	if !includeAllStatuses {
+		query += " AND status = 'approved'"
+	}
+	query += " ORDER BY created_at ASC"
+
+	rows, err := r.pool.Query(ctx, query, reviewIDs)
+	if err != nil {
+		return nil, fmt.Errorf("query review media: %w", err)
+	}
+	defer rows.Close()
+
+	mediaByReviewID := make(map[uuid.UUID][]domain.ReviewMedia, len(reviewIDs))
+	for rows.Next() {
+		var media domain.ReviewMedia
+		var fileSize sql.NullInt64
+		var status string
+
+		if err := rows.Scan(
+			&media.MediaID,
+			&media.ReviewID,
+			&media.MediaURL,
+			&media.MediaType,
+			&fileSize,
+			&status,
+			&media.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan review media: %w", err)
+		}
+
+		if fileSize.Valid {
+			value := fileSize.Int64
+			media.FileSize = &value
+		}
+		media.Status = domain.ModerationStatus(status)
+		mediaByReviewID[media.ReviewID] = append(mediaByReviewID[media.ReviewID], media)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate review media rows: %w", err)
+	}
+
+	for i := range reviews {
+		reviews[i].Media = mediaByReviewID[reviews[i].ReviewID]
+	}
+
+	return reviews, nil
 }
 
 func (r *ReviewRepository) GetPendingReviews(
@@ -217,6 +293,136 @@ func (r *ReviewRepository) GetPendingReviews(
 
 		reviews = append(reviews, rec.MapToDomain())
 		total = rec.TotalCount
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("iterate pending reviews rows: %w", err)
+	}
+	reviews, err = r.attachMediaToReviews(ctx, reviews, true)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return reviews, total, nil
+}
+
+func (r *ReviewRepository) GetLikedReviews(
+	ctx context.Context,
+	userID uuid.UUID,
+	viewerID *uuid.UUID,
+	limit, offset *int,
+) ([]domain.Review, int, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.pool.OpTimeout())
+	defer cancel()
+
+	countQuery := `
+		SELECT COUNT(*)
+		FROM review_likes rl
+		JOIN reviews r ON r.review_id = rl.review_id
+		WHERE rl.user_id = $1
+			AND r.status = 'approved'
+			AND r.is_visible = true
+			AND r.deleted_at IS NULL
+	`
+
+	var total int
+	if err := r.pool.QueryRow(ctx, countQuery, userID).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count liked reviews: %w", err)
+	}
+	if total == 0 {
+		return []domain.Review{}, 0, nil
+	}
+
+	args := []any{userID}
+	argIndex := 2
+	isLikedByMeExpr := "FALSE as is_liked_by_me"
+	if viewerID != nil {
+		args = append(args, *viewerID)
+		isLikedByMeExpr = fmt.Sprintf(
+			"EXISTS(SELECT 1 FROM review_likes WHERE review_id = r.review_id AND user_id = $%d) as is_liked_by_me",
+			argIndex,
+		)
+		argIndex++
+	}
+
+	query := fmt.Sprintf(`
+		SELECT
+			r.*,
+			u.username as author_name, u.avatar_url as author_avatar,
+			c.title as concert_title,
+			c.poster_url as concert_poster_url,
+			(SELECT COUNT(*) FROM review_likes WHERE review_id = r.review_id) as likes_count,
+			COUNT(*) OVER() as total_count,
+			(
+				SELECT COALESCE(jsonb_agg(jsonb_build_object(
+					'MediaID', rm.media_id,
+					'ReviewID', rm.review_id,
+					'MediaURL', rm.media_url,
+					'MediaType', rm.media_type,
+					'FileSize', rm.file_size,
+					'Status', rm.status,
+					'CreatedAt', rm.created_at
+				)), '[]'::jsonb)
+				FROM review_media rm
+				WHERE rm.review_id = r.review_id AND rm.status = 'approved'
+			) as media_json,
+			(
+				SELECT COALESCE(jsonb_agg(jsonb_build_object(
+					'ArtistID', a.artist_id,
+					'Name', a.name,
+					'IsMain', ca.is_main
+				)), '[]'::jsonb)
+				FROM concert_artists ca
+				JOIN artists a ON a.artist_id = ca.artist_id
+				WHERE ca.concert_id = r.concert_id AND ca.is_main = true
+			) as concert_artists_json,
+			%s
+		FROM review_likes rl
+		JOIN reviews r ON r.review_id = rl.review_id
+		JOIN users u ON r.user_id = u.user_id
+		JOIN concerts c ON r.concert_id = c.concert_id
+		WHERE rl.user_id = $1
+			AND r.status = 'approved'
+			AND r.is_visible = true
+			AND r.deleted_at IS NULL
+		ORDER BY rl.created_at DESC
+	`, isLikedByMeExpr)
+
+	if limit != nil && offset != nil {
+		query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
+		args = append(args, *limit, *offset)
+	}
+
+	rows, err := r.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("query liked reviews: %w", err)
+	}
+	defer rows.Close()
+
+	reviews := make([]domain.Review, 0)
+	for rows.Next() {
+		var rec reviewRecord
+		err := rows.Scan(
+			&rec.ReviewID, &rec.UserID, &rec.ConcertID, &rec.Title, &rec.Text, &rec.OriginalText,
+			&rec.P1, &rec.P2, &rec.P3, &rec.P4, &rec.P5, &rec.RatingTotal,
+			&rec.Status, &rec.RejectionReason, &rec.ModeratedByUserID, &rec.IsVisible,
+			&rec.CreatedAt, &rec.DeletedAt,
+			&rec.AuthorName, &rec.AuthorAvatar,
+			&rec.ConcertTitle, &rec.ConcertPosterURL, &rec.LikesCount, &rec.TotalCount,
+			&rec.MediaJSON, &rec.ConcertArtistsJSON, &rec.IsLikedByMe,
+		)
+		if err != nil {
+			return nil, 0, fmt.Errorf("scan liked review: %w", err)
+		}
+
+		reviews = append(reviews, rec.MapToDomain())
+		total = rec.TotalCount
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("iterate liked reviews rows: %w", err)
+	}
+	reviews, err = r.attachMediaToReviews(ctx, reviews, false)
+	if err != nil {
+		return nil, 0, err
 	}
 
 	return reviews, total, nil
@@ -302,7 +508,7 @@ func (r *ReviewRepository) GetReviewByID(ctx context.Context, id uuid.UUID) (dom
 	return rec.MapToDomain(), nil
 }
 
-func (r *ReviewRepository) GetUserReviews(ctx context.Context, userID uuid.UUID, includeStatuses []string) ([]domain.Review, error) {
+func (r *ReviewRepository) GetUserReviews(ctx context.Context, userID uuid.UUID, viewerID *uuid.UUID, includeStatuses []string) ([]domain.Review, error) {
 	ctx, cancel := context.WithTimeout(ctx, r.pool.OpTimeout())
 	defer cancel()
 
@@ -311,9 +517,19 @@ func (r *ReviewRepository) GetUserReviews(ctx context.Context, userID uuid.UUID,
 	}
 
 	// Строим список статусов для фильтра
-	statusCondition := "r.status = ANY($2)"
+	args := []any{userID, includeStatuses}
+	isLikedByMeExpr := "FALSE as is_liked_by_me"
+	if viewerID != nil {
+		args = append(args, *viewerID)
+		isLikedByMeExpr = "EXISTS(SELECT 1 FROM review_likes WHERE review_id = r.review_id AND user_id = $3) as is_liked_by_me"
+	}
 
-	query := `
+	mediaStatusFilter := "AND rm.status = 'approved'"
+	if viewerID != nil && *viewerID == userID {
+		mediaStatusFilter = ""
+	}
+
+	query := fmt.Sprintf(`
 		SELECT 
 			r.*,
 			u.username as author_name, u.avatar_url as author_avatar,
@@ -321,14 +537,17 @@ func (r *ReviewRepository) GetUserReviews(ctx context.Context, userID uuid.UUID,
 			c.poster_url as concert_poster_url,
 			(SELECT COUNT(*) FROM review_likes WHERE review_id = r.review_id) as likes_count,
 			(
-				SELECT jsonb_agg(jsonb_build_object(
+				SELECT COALESCE(jsonb_agg(jsonb_build_object(
 					'MediaID', rm.media_id,
+					'ReviewID', rm.review_id,
 					'MediaURL', rm.media_url,
 					'MediaType', rm.media_type,
-					'Status', rm.status
-				))
+					'FileSize', rm.file_size,
+					'Status', rm.status,
+					'CreatedAt', rm.created_at
+				)), '[]'::jsonb)
 				FROM review_media rm
-				WHERE rm.review_id = r.review_id AND rm.status = 'approved'
+				WHERE rm.review_id = r.review_id %s
 			) as media_json,
 			(
 				SELECT COALESCE(jsonb_agg(jsonb_build_object(
@@ -339,15 +558,16 @@ func (r *ReviewRepository) GetUserReviews(ctx context.Context, userID uuid.UUID,
 				FROM concert_artists ca
 				JOIN artists a ON a.artist_id = ca.artist_id
 				WHERE ca.concert_id = r.concert_id AND ca.is_main = true
-			) as concert_artists_json
+			) as concert_artists_json,
+			%s
 		FROM reviews r
 		JOIN users u ON r.user_id = u.user_id
 		JOIN concerts c ON r.concert_id = c.concert_id
-		WHERE r.user_id = $1 AND ` + statusCondition + ` AND r.deleted_at IS NULL
+		WHERE r.user_id = $1 AND r.status = ANY($2) AND r.deleted_at IS NULL
 		ORDER BY r.created_at DESC
-	`
+	`, mediaStatusFilter, isLikedByMeExpr)
 
-	rows, err := r.pool.Query(ctx, query, userID, includeStatuses)
+	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query user reviews: %w", err)
 	}
@@ -363,7 +583,7 @@ func (r *ReviewRepository) GetUserReviews(ctx context.Context, userID uuid.UUID,
 			&rec.CreatedAt, &rec.DeletedAt,
 			&rec.AuthorName, &rec.AuthorAvatar,
 			&rec.ConcertTitle, &rec.ConcertPosterURL, &rec.LikesCount,
-			&rec.MediaJSON, &rec.ConcertArtistsJSON,
+			&rec.MediaJSON, &rec.ConcertArtistsJSON, &rec.IsLikedByMe,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan user review: %w", err)
@@ -373,6 +593,12 @@ func (r *ReviewRepository) GetUserReviews(ctx context.Context, userID uuid.UUID,
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate user reviews rows: %w", err)
+	}
+
+	includeAllMediaStatuses := viewerID != nil && *viewerID == userID
+	reviews, err = r.attachMediaToReviews(ctx, reviews, includeAllMediaStatuses)
+	if err != nil {
+		return nil, err
 	}
 
 	return reviews, nil
