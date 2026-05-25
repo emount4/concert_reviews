@@ -27,5 +27,9 @@ func (s *ArtistService) CreateArtist(ctx context.Context, artist domain.Artist) 
 		return domain.Artist{}, fmt.Errorf("create artist in repo: %w", err)
 	}
 
+	if s.statsCache != nil {
+		_ = s.statsCache.InvalidateGlobalStats(ctx)
+	}
+
 	return createdArtist, nil
 }

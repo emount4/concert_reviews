@@ -42,6 +42,10 @@ func (s *ArtistService) DeleteArtistHard(ctx context.Context, id int) error {
 		return fmt.Errorf("hard delete artist: %w", err)
 	}
 
+	if s.statsCache != nil {
+		_ = s.statsCache.InvalidateGlobalStats(ctx)
+	}
+
 	return nil
 }
 
@@ -52,6 +56,10 @@ func (s *ArtistService) DeleteArtistSoft(ctx context.Context, id int) error {
 
 	if err := s.artistRepository.DeleteArtistSoft(ctx, id); err != nil {
 		return fmt.Errorf("soft delete artist: %w", err)
+	}
+
+	if s.statsCache != nil {
+		_ = s.statsCache.InvalidateGlobalStats(ctx)
 	}
 
 	return nil
@@ -65,6 +73,10 @@ func (s *ArtistService) RestoreArtist(ctx context.Context, id int) (domain.Artis
 	restored, err := s.artistRepository.RestoreArtist(ctx, id)
 	if err != nil {
 		return domain.Artist{}, fmt.Errorf("restore artist: %w", err)
+	}
+
+	if s.statsCache != nil {
+		_ = s.statsCache.InvalidateGlobalStats(ctx)
 	}
 
 	return restored, nil

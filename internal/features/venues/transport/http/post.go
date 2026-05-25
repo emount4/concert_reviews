@@ -27,6 +27,10 @@ func (h *VenueHTTPHandler) CreateVenue(rw http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	h.logAdminAction(ctx, "venue_created", createdVenue.VenueID, map[string]any{
+		"name": createdVenue.Name,
+	})
+
 	rw.Header().Set("Content-Type", "application/json")
 	response := MapDomainToVenueResponse(createdVenue)
 

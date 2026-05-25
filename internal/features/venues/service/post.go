@@ -33,5 +33,9 @@ func (s *VenueService) CreateVenue(ctx context.Context, venue domain.Venue) (dom
 		return domain.Venue{}, fmt.Errorf("create venue repository: %w", err)
 	}
 
+	if s.statsCache != nil {
+		_ = s.statsCache.InvalidateGlobalStats(ctx)
+	}
+
 	return createdVenue, nil
 }

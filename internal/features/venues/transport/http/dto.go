@@ -82,7 +82,7 @@ type ListVenuesResponse struct {
 
 type ListVenuesAdminResponse struct {
 	Items     []VenueResponseAdmin `json:"items"`
-	PageCount int                 `json:"page_count"`
+	PageCount int                  `json:"page_count"`
 }
 
 func MapCreateVenueDTOToDomain(dto CreateVenueRequest) domain.Venue {

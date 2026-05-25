@@ -55,5 +55,9 @@ func (s *AuthService) Register(ctx context.Context, user core_domain.User, passw
 		return core_domain.AuthResponse{}, fmt.Errorf("register withtx: %w ", err)
 	}
 
+	if s.statsCache != nil {
+		_ = s.statsCache.InvalidateGlobalStats(ctx)
+	}
+
 	return tokens, nil
 }

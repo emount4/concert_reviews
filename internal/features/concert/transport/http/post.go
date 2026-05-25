@@ -29,6 +29,10 @@ func (h *ConcertHTTPHandler) CreateConcert(rw http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	h.logAdminAction(ctx, "concert_created", createdConcert.ConcertID, map[string]any{
+		"title": createdConcert.Title,
+	})
+
 	responseHandler.JSONResponse(MapDomainToConcertResponse(createdConcert), http.StatusCreated)
 }
 
@@ -81,6 +85,10 @@ func (h *ConcertHTTPHandler) RestoreConcert(rw http.ResponseWriter, r *http.Requ
 		responseHandler.ErrorResponse(err, "failed to restore concert")
 		return
 	}
+
+	h.logAdminAction(ctx, "concert_restored", id, map[string]any{
+		"title": restoredConcert.Title,
+	})
 
 	responseHandler.JSONResponse(MapDomainToConcertResponse(restoredConcert), http.StatusOK)
 }

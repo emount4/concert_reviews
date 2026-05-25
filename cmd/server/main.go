@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	core_logger "github.com/emount4/concert_reviews/internal/core/logger"
+	core_admin_postgres_repository "github.com/emount4/concert_reviews/internal/core/repository/postgres/admin"
 	core_postgres_pool "github.com/emount4/concert_reviews/internal/core/repository/postgres/pool"
 	core_postgres_tx "github.com/emount4/concert_reviews/internal/core/repository/postgres/tx"
 	core_redis "github.com/emount4/concert_reviews/internal/core/repository/redis"
@@ -82,6 +83,7 @@ func main() {
 	defer pool.Close()
 
 	txManager := core_postgres_tx.NewManager(pool)
+	auditRepository := core_admin_postgres_repository.NewAuditRepository(pool, logger)
 
 	logger.Debug("initializing s3")
 	s3Config := core_s3.NewConfigMust()
@@ -97,47 +99,48 @@ func main() {
 		logger.Fatal("failed to init redis storage", zap.Error(err))
 	}
 
+	statsRepository := stats_postgres_repository.NewStatsRepository(pool, txManager)
+	statsRedisRepository := stats_redis_repository.NewStatsRedisRepository(redis)
+
 	logger.Debug("initializing features", zap.String("features", "auth"))
 	authRepository := auth_postgres_repository.NewAuthRepository(pool)
 	authConfig := auth_service.NewConfigMust()
 	hasher := auth_service.NewSHA1Hasher(authConfig.PasswordSalt)
 	jwtManager := auth_service.NewManager(authConfig.JWTSigningKey)
-	authService := auth_service.NewAuthService(authRepository, txManager, authConfig, hasher, jwtManager)
+	authService := auth_service.NewAuthService(authRepository, txManager, authConfig, hasher, jwtManager, statsRedisRepository)
 	authTransportHTTP := auth_transport_http.NewAuthHTTPHandler(authService)
 	authRoutes := authTransportHTTP.Routes()
 
 	logger.Debug("initializing features", zap.String("features", "stats"))
-	statsRepository := stats_postgres_repository.NewStatsRepository(pool, txManager)
-	statsRedisRepository := stats_redis_repository.NewStatsRedisRepository(redis)
 	statsService := stats_service.NewStatsService(statsRepository, statsRedisRepository)
 	statsTransportHTTP := stats_transport_http.NewStatsHTTPHandler(statsService)
 	statsRoutes := statsTransportHTTP.Routes()
 
 	logger.Debug("initializing features", zap.String("features", "artist"))
 	artistRepository := artist_postgres_repository.NewArtistRepository(pool)
-	artistService := artist_service.NewArtistService(artistRepository, s3Storage)
-	artistsTransportHTTP := artist_transport_http.NewArtistHTTPHandler(artistService)
+	artistService := artist_service.NewArtistService(artistRepository, s3Storage, statsRedisRepository)
+	artistsTransportHTTP := artist_transport_http.NewArtistHTTPHandler(artistService, auditRepository)
 	artistRoutes := artistsTransportHTTP.Routes()
 	applyRouteAccessPolicy(artistRoutes, jwtManager)
 
 	logger.Debug("initializing features", zap.String("features", "city"))
 	cityRepository := city_postgres_repository.NewCityRepository(pool)
 	cityService := city_service.NewCityService(cityRepository)
-	cityTransportHTTP := city_transport_http.NewCityHTTPHandler(cityService)
+	cityTransportHTTP := city_transport_http.NewCityHTTPHandler(cityService, auditRepository)
 	cityRoutes := cityTransportHTTP.Routes()
 	applyRouteAccessPolicy(cityRoutes, jwtManager)
 
 	logger.Debug("initializing features", zap.String("features", "venue"))
 	venueRepository := venue_postgres_repository.NewVenueRepository(pool)
-	venueService := venue_service.NewVenueService(venueRepository, s3Storage)
-	venueTransportHTTP := venue_transport_http.NewVenueHTTPHandler(venueService)
+	venueService := venue_service.NewVenueService(venueRepository, s3Storage, statsRedisRepository)
+	venueTransportHTTP := venue_transport_http.NewVenueHTTPHandler(venueService, auditRepository)
 	venueRoutes := venueTransportHTTP.Routes()
 	applyRouteAccessPolicy(venueRoutes, jwtManager)
 
 	logger.Debug("initializing features", zap.String("features", "concerts"))
 	concertRepository := concert_postgres_repository.NewConcertRepository(pool, txManager)
-	concertService := concert_service.NewConcertService(concertRepository, s3Storage)
-	concertTransportHTTP := concert_transport_http.NewConcertHTTPHandler(concertService)
+	concertService := concert_service.NewConcertService(concertRepository, s3Storage, statsRedisRepository)
+	concertTransportHTTP := concert_transport_http.NewConcertHTTPHandler(concertService, auditRepository)
 	concertRoutes := concertTransportHTTP.Routes()
 	applyRouteAccessPolicy(concertRoutes, jwtManager)
 
@@ -145,7 +148,7 @@ func main() {
 	reviewRepository := review_postgres_repository.NewReviewRepository(pool, txManager)
 	reviewRedis := review_redis_repository.NewReviewRedisRepository(redis)
 	reviewService := review_service.NewReviewService(reviewRepository, s3Storage, reviewRedis)
-	reviewHTTPHandler := review_transport_http.NewReviewHTTPHandler(reviewService)
+	reviewHTTPHandler := review_transport_http.NewReviewHTTPHandler(reviewService, auditRepository)
 	reviewRoutes := reviewHTTPHandler.Routes()
 	applyRouteAccessPolicy(reviewRoutes, jwtManager)
 
@@ -184,8 +187,8 @@ func main() {
 
 	logger.Debug("initializing features", zap.String("features", "moderation"))
 	moderationRepository := moderation_postgres_repository.NewModerationRepository(pool)
-	moderationService := moderation_service.NewModerationService(moderationRepository)
-	moderationTransportHTTP := moderation_transport_http.NewModerationHTTPHandler(moderationService)
+	moderationService := moderation_service.NewModerationService(moderationRepository, statsRedisRepository)
+	moderationTransportHTTP := moderation_transport_http.NewModerationHTTPHandler(moderationService, auditRepository)
 	moderationRoutes := moderationTransportHTTP.Routes()
 	applyRouteAccessPolicy(moderationRoutes, jwtManager)
 

@@ -25,5 +25,7 @@ func (h *CityHTTPHandler) Delete(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.logAdminAction(ctx, "city_deleted", id, nil)
+
 	responseHandler.JSONResponse(nil, http.StatusNoContent)
 }

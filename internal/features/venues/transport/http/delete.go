@@ -25,6 +25,8 @@ func (h *VenueHTTPHandler) DeleteVenueHard(rw http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	h.logAdminAction(ctx, "venue_hard_deleted", id, nil)
+
 	rw.WriteHeader(http.StatusNoContent)
 }
 
@@ -44,6 +46,8 @@ func (h *VenueHTTPHandler) DeleteVenueSoft(rw http.ResponseWriter, r *http.Reque
 		responseHandler.ErrorResponse(err, "failed to soft delete venue")
 		return
 	}
+
+	h.logAdminAction(ctx, "venue_soft_deleted", id, nil)
 
 	rw.WriteHeader(http.StatusNoContent)
 }
@@ -65,6 +69,10 @@ func (h *VenueHTTPHandler) RestoreVenue(rw http.ResponseWriter, r *http.Request)
 		responseHandler.ErrorResponse(err, "failed to restore venue")
 		return
 	}
+
+	h.logAdminAction(ctx, "venue_restored", id, map[string]any{
+		"name": restoredVenue.Name,
+	})
 
 	rw.Header().Set("Content-Type", "application/json")
 	response := MapDomainToVenueResponse(restoredVenue)

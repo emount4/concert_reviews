@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/emount4/concert_reviews/internal/core/domain"
+	core_ports "github.com/emount4/concert_reviews/internal/core/domain/ports"
 	core_http_server "github.com/emount4/concert_reviews/internal/core/transport/http/server"
 )
 
@@ -21,12 +22,17 @@ type Service interface {
 
 type VenueHTTPHandler struct {
 	venueService Service
+	adminLogger  core_ports.AdminLogger
 }
 
-func NewVenueHTTPHandler(venueService Service) *VenueHTTPHandler {
-	return &VenueHTTPHandler{
+func NewVenueHTTPHandler(venueService Service, adminLogger ...core_ports.AdminLogger) *VenueHTTPHandler {
+	h := &VenueHTTPHandler{
 		venueService: venueService,
 	}
+	if len(adminLogger) > 0 {
+		h.adminLogger = adminLogger[0]
+	}
+	return h
 }
 
 func (h *VenueHTTPHandler) Routes() []core_http_server.Route {

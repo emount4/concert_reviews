@@ -53,6 +53,10 @@ func (h *ReviewHTTPHandler) ApproveReview(rw http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	h.logAdminAction(ctx, moderatorID, "review_approved", reviewID, map[string]any{
+		"allowed_media_count": len(req.AllowedMediaIDs),
+	})
+
 	res.JSONResponse(MapDomainToReviewResponse(approvedReview), http.StatusOK)
 }
 
@@ -89,6 +93,10 @@ func (h *ReviewHTTPHandler) RejectReview(rw http.ResponseWriter, r *http.Request
 		return
 	}
 
+	h.logAdminAction(ctx, moderatorID, "review_rejected", reviewID, map[string]any{
+		"reason": req.Reason,
+	})
+
 	res.JSONResponse(nil, http.StatusNoContent)
 }
 
@@ -118,6 +126,8 @@ func (h *ReviewHTTPHandler) ReturnReviewToPending(rw http.ResponseWriter, r *htt
 		res.ErrorResponse(err, "failed to return review to pending")
 		return
 	}
+
+	h.logAdminAction(ctx, moderatorID, "review_returned_to_pending", reviewID, nil)
 
 	res.JSONResponse(nil, http.StatusNoContent)
 }

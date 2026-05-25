@@ -138,7 +138,7 @@ type ArtistStatsResponse struct {
 
 type ListArtistsAdminResponse struct {
 	Items     []ArtistAdminResponse `json:"items"`
-	PageCount int                  `json:"page_count"`
+	PageCount int                   `json:"page_count"`
 }
 
 func MapDomainToAdminResponse(a domain.Artist) ArtistAdminResponse {

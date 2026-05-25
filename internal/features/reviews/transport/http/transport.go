@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/emount4/concert_reviews/internal/core/domain"
+	core_ports "github.com/emount4/concert_reviews/internal/core/domain/ports"
 	core_http_server "github.com/emount4/concert_reviews/internal/core/transport/http/server"
 	"github.com/google/uuid"
 )
@@ -33,12 +34,17 @@ type ReviewService interface {
 
 type ReviewHTTPHandler struct {
 	reviewService ReviewService
+	adminLogger   core_ports.AdminLogger
 }
 
-func NewReviewHTTPHandler(s ReviewService) *ReviewHTTPHandler {
-	return &ReviewHTTPHandler{
+func NewReviewHTTPHandler(s ReviewService, adminLogger ...core_ports.AdminLogger) *ReviewHTTPHandler {
+	h := &ReviewHTTPHandler{
 		reviewService: s,
 	}
+	if len(adminLogger) > 0 {
+		h.adminLogger = adminLogger[0]
+	}
+	return h
 }
 
 func (h *ReviewHTTPHandler) Routes() []core_http_server.Route {

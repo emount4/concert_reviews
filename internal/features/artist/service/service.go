@@ -10,6 +10,7 @@ import (
 type ArtistService struct {
 	artistRepository ArtistRepository
 	s3               core_ports.S3Provider
+	statsCache       GlobalStatsCache
 }
 
 type ArtistRepository interface {
@@ -35,12 +36,23 @@ type ArtistRepository interface {
 	) ([]domain.Artist, int, error)
 }
 
+type GlobalStatsCache interface {
+	InvalidateGlobalStats(ctx context.Context) error
+}
+
 func NewArtistService(
 	artistRepository ArtistRepository,
 	s3 core_ports.S3Provider,
+	statsCache ...GlobalStatsCache,
 ) *ArtistService {
+	var cache GlobalStatsCache
+	if len(statsCache) > 0 {
+		cache = statsCache[0]
+	}
+
 	return &ArtistService{
 		artistRepository: artistRepository,
 		s3:               s3,
+		statsCache:       cache,
 	}
 }

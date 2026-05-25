@@ -11,6 +11,7 @@ import (
 type ConcertService struct {
 	concertRepository ConcertRepository
 	s3                core_ports.S3Provider
+	statsCache        GlobalStatsCache
 }
 
 type ConcertRepository interface {
@@ -57,12 +58,23 @@ type ConcertRepository interface {
 	CountPendingSuggestions(ctx context.Context, userID uuid.UUID) (int, error)
 }
 
+type GlobalStatsCache interface {
+	InvalidateGlobalStats(ctx context.Context) error
+}
+
 func NewConcertService(
 	concertRepository ConcertRepository,
 	s3 core_ports.S3Provider,
+	statsCache ...GlobalStatsCache,
 ) *ConcertService {
+	var cache GlobalStatsCache
+	if len(statsCache) > 0 {
+		cache = statsCache[0]
+	}
+
 	return &ConcertService{
 		concertRepository: concertRepository,
 		s3:                s3,
+		statsCache:        cache,
 	}
 }

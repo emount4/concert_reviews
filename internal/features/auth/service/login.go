@@ -38,6 +38,9 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (core_d
 	if !s.hasher.ValidatePassword(password, user.PasswordHash) {
 		return core_domain.AuthResponse{}, fmt.Errorf("%w: invalid credentials", core_errors.ErrUnauthorized)
 	}
+	if !user.IsActive || user.IsBanned {
+		return core_domain.AuthResponse{}, fmt.Errorf("%w: account is not available", core_errors.ErrUnauthorized)
+	}
 
 	tokens, err := s.jwt.Generate(user.ID, user.RoleID, s.config.AccessTokenTTL, s.config.RefreshTokenTTL)
 	if err != nil {

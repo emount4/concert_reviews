@@ -42,3 +42,64 @@ func mapProfileModerationFieldName(fieldName string) string {
 		return fieldName
 	}
 }
+
+func MapAdminUsersToResponse(users []domain.User) ListAdminUsersResponse {
+	items := make([]AdminUserResponse, len(users))
+	for i, user := range users {
+		items[i] = MapAdminUserToResponse(user)
+	}
+	return ListAdminUsersResponse{Items: items}
+}
+
+func MapAdminUserToResponse(user domain.User) AdminUserResponse {
+	resp := AdminUserResponse{
+		ID:               user.ID,
+		Email:            user.Email,
+		Username:         user.Username,
+		Bio:              user.Bio,
+		AvatarURL:        user.AvatarURL,
+		BannerURL:        user.BannerURL,
+		TelegramID:       user.TelegramID,
+		TelegramUsername: user.TelegramUsername,
+		RoleID:           user.RoleID,
+		IsEmailVerified:  user.IsEmailVerified,
+		IsActive:         user.IsActive,
+		IsBanned:         user.IsBanned,
+		BannedByUserID:   user.BannedByUserID,
+		CreatedAt:        user.CreatedAt.Format(time.RFC3339),
+		UpdatedAt:        user.UpdatedAt.Format(time.RFC3339),
+	}
+
+	if user.Stats != nil {
+		resp.Stats = &AdminUserStatsResponse{
+			ReviewsCount:       user.Stats.ReviewsCount,
+			LikesGivenCount:    user.Stats.LikesGivenCount,
+			LikesReceivedCount: user.Stats.LikesReceivedCount,
+		}
+	}
+
+	return resp
+}
+
+func MapAdminLogsToResponse(logs []domain.AdminLog) ListAdminLogsResponse {
+	items := make([]AdminLogResponse, len(logs))
+	for i, item := range logs {
+		items[i] = MapAdminLogToResponse(item)
+	}
+	return ListAdminLogsResponse{Items: items}
+}
+
+func MapAdminLogToResponse(item domain.AdminLog) AdminLogResponse {
+	return AdminLogResponse{
+		ID: item.LogID,
+		Moderator: AdminLogModeratorResponse{
+			ID:       item.ModeratorID,
+			Username: item.ModeratorUsername,
+		},
+		Action:     item.Action,
+		TargetID:   item.TargetID,
+		TargetType: item.TargetType,
+		Details:    item.Details,
+		CreatedAt:  item.CreatedAt.Format(time.RFC3339),
+	}
+}

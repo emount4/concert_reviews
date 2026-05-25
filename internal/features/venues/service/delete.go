@@ -28,6 +28,9 @@ func (s *VenueService) DeleteVenueHard(ctx context.Context, id int) error {
 	if err := s.venueRepository.DeleteVenueHard(ctx, id); err != nil {
 		return fmt.Errorf("hard delete venue: %w", err)
 	}
+	if s.statsCache != nil {
+		_ = s.statsCache.InvalidateGlobalStats(ctx)
+	}
 	return nil
 }
 
@@ -38,6 +41,9 @@ func (s *VenueService) DeleteVenueSoft(ctx context.Context, id int) error {
 	}
 	if err := s.venueRepository.DeleteVenueSoft(ctx, id); err != nil {
 		return fmt.Errorf("soft delete venue: %w", err)
+	}
+	if s.statsCache != nil {
+		_ = s.statsCache.InvalidateGlobalStats(ctx)
 	}
 	return nil
 }
@@ -50,6 +56,9 @@ func (s *VenueService) RestoreVenue(ctx context.Context, id int) (domain.Venue, 
 	venue, err := s.venueRepository.RestoreVenue(ctx, id)
 	if err != nil {
 		return domain.Venue{}, fmt.Errorf("restore venue: %w", err)
+	}
+	if s.statsCache != nil {
+		_ = s.statsCache.InvalidateGlobalStats(ctx)
 	}
 	return venue, nil
 }

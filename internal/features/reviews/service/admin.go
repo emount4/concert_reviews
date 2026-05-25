@@ -44,6 +44,8 @@ func (s *ReviewService) RejectReview(ctx context.Context, id, moderatorID uuid.U
 		return fmt.Errorf("repository rejection failed: %w", err)
 	}
 
+	_ = s.statsRedis.InvalidateGlobalStats(ctx)
+
 	return nil
 }
 
@@ -52,6 +54,8 @@ func (s *ReviewService) ReturnReviewToPending(ctx context.Context, id, moderator
 	if err != nil {
 		return fmt.Errorf("repository return to pending failed: %w", err)
 	}
+
+	_ = s.statsRedis.InvalidateGlobalStats(ctx)
 
 	return nil
 }

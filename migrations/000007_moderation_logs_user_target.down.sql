@@ -1,0 +1,2 @@
+-- PostgreSQL cannot safely remove enum values without recreating dependent columns.
+-- Keep target_type_enum values 'user' and 'city' on rollback.

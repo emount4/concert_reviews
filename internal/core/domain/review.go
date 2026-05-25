@@ -63,9 +63,6 @@ type ReviewMedia struct {
 	CreatedAt time.Time
 }
 
-// --- Бизнес-логика ---
-
-// CalculateRating вычисляет итоговый балл по формуле:
 // (p1+p2+p3+p4) * 1.4 * K, где K зависит от p5 (линейный прирост)
 func (r *Review) CalculateRating() int {
 	// 1. Коэффициент K для P5.

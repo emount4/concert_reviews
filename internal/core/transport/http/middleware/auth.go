@@ -15,7 +15,6 @@ type JwtManager interface {
 	Parse(accessToken string) (*auth_service.JWTClaims, error)
 }
 
-// TODO: ЗАМЕНИТЬ НА ИНТЕРФЕЙС
 func Auth(jwtManager JwtManager) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(
@@ -72,4 +71,16 @@ func GetUserID(ctx context.Context) (uuid.UUID, error) {
 		return uuid.Nil, fmt.Errorf("user id in context is not uuid.UUID, got %T", id)
 	}
 	return userID, nil
+}
+
+func GetRoleID(ctx context.Context) (int, error) {
+	id := ctx.Value(RoleIDKey)
+	if id == nil {
+		return 0, fmt.Errorf("role id not found in context")
+	}
+	roleID, ok := id.(int)
+	if !ok {
+		return 0, fmt.Errorf("role id in context is not int, got %T", id)
+	}
+	return roleID, nil
 }

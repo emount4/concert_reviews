@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	core_models "github.com/emount4/concert_reviews/internal/core/domain/models"
+	core_ports "github.com/emount4/concert_reviews/internal/core/domain/ports"
 	core_http_server "github.com/emount4/concert_reviews/internal/core/transport/http/server"
 )
 
@@ -19,12 +20,17 @@ type Service interface {
 
 type CityHTTPHandler struct {
 	cityService Service
+	adminLogger core_ports.AdminLogger
 }
 
-func NewCityHTTPHandler(cityService Service) *CityHTTPHandler {
-	return &CityHTTPHandler{
+func NewCityHTTPHandler(cityService Service, adminLogger ...core_ports.AdminLogger) *CityHTTPHandler {
+	h := &CityHTTPHandler{
 		cityService: cityService,
 	}
+	if len(adminLogger) > 0 {
+		h.adminLogger = adminLogger[0]
+	}
+	return h
 }
 
 func (h *CityHTTPHandler) Routes() []core_http_server.Route {

@@ -3,6 +3,7 @@ package moderation_transport_http
 import (
 	"net/http"
 
+	"github.com/emount4/concert_reviews/internal/core/domain"
 	core_logger "github.com/emount4/concert_reviews/internal/core/logger"
 	core_http_middleware "github.com/emount4/concert_reviews/internal/core/transport/http/middleware"
 	core_http_request "github.com/emount4/concert_reviews/internal/core/transport/http/request"
@@ -31,6 +32,11 @@ func (h *ModerationHTTPHandler) ApproveProfileRequest(rw http.ResponseWriter, r 
 		return
 	}
 
+	h.logAdminAction(ctx, moderatorID, "profile_request_approved", domain.LogTargetUser, req.UserID.String(), map[string]any{
+		"moderation_id": id,
+		"field_name":    req.FieldName,
+	})
+
 	res.JSONResponse(MapProfileModerationRequestToResponse(req), http.StatusOK)
 }
 
@@ -55,6 +61,11 @@ func (h *ModerationHTTPHandler) RejectProfileRequest(rw http.ResponseWriter, r *
 		res.ErrorResponse(err, "failed to reject profile moderation request")
 		return
 	}
+
+	h.logAdminAction(ctx, moderatorID, "profile_request_rejected", domain.LogTargetUser, req.UserID.String(), map[string]any{
+		"moderation_id": id,
+		"field_name":    req.FieldName,
+	})
 
 	res.JSONResponse(MapProfileModerationRequestToResponse(req), http.StatusOK)
 }

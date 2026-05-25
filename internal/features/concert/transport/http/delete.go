@@ -31,6 +31,8 @@ func (h *ConcertHTTPHandler) DeleteConcertSoft(rw http.ResponseWriter, r *http.R
 		return
 	}
 
+	h.logAdminAction(ctx, "concert_soft_deleted", id, nil)
+
 	responseHandler.JSONResponse(nil, http.StatusNoContent)
 }
 
@@ -56,6 +58,8 @@ func (h *ConcertHTTPHandler) DeleteConcertHard(rw http.ResponseWriter, r *http.R
 		return
 	}
 
+	h.logAdminAction(ctx, "concert_hard_deleted", id, nil)
+
 	responseHandler.JSONResponse(nil, http.StatusNoContent)
 }
 
@@ -80,6 +84,8 @@ func (h *ConcertHTTPHandler) DeleteSuggestionAdmin(rw http.ResponseWriter, r *ht
 		responseHandler.ErrorResponse(err, "failed to delete concert suggestion")
 		return
 	}
+
+	h.logAdminAction(ctx, "concert_suggestion_deleted", id, nil)
 
 	responseHandler.JSONResponse(nil, http.StatusNoContent)
 }

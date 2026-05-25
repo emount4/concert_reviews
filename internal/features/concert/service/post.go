@@ -30,6 +30,10 @@ func (s *ConcertService) CreateConcert(
 		return domain.Concert{}, fmt.Errorf("create concert in repository: %w", err)
 	}
 
+	if s.statsCache != nil {
+		_ = s.statsCache.InvalidateGlobalStats(ctx)
+	}
+
 	return created, nil
 }
 
@@ -66,6 +70,10 @@ func (s *ConcertService) RestoreConcert(ctx context.Context, id uuid.UUID) (doma
 	restored, err := s.concertRepository.RestoreConcert(ctx, id)
 	if err != nil {
 		return domain.Concert{}, fmt.Errorf("restore concert in repository: %w", err)
+	}
+
+	if s.statsCache != nil {
+		_ = s.statsCache.InvalidateGlobalStats(ctx)
 	}
 
 	return restored, nil

@@ -32,5 +32,10 @@ func (h *CityHTTPHandler) Update(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.logAdminAction(ctx, "city_updated", id, map[string]any{
+		"name": updatedCity.Name,
+		"slug": updatedCity.Slug,
+	})
+
 	responseHandler.JSONResponse(CityDTOFromDomain(updatedCity), http.StatusOK)
 }

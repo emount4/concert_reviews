@@ -30,6 +30,10 @@ func (h *ArtistHTTPHandler) Create(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.logAdminAction(ctx, "artist_created", createdArtist.ArtistID, map[string]any{
+		"name": createdArtist.Name,
+	})
+
 	rw.Header().Set("Content-Type", "application/json")
 	response := MapDomainToResponse(createdArtist)
 

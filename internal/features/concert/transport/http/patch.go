@@ -45,6 +45,10 @@ func (h *ConcertHTTPHandler) UpdateConcert(rw http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	h.logAdminAction(ctx, "concert_updated", id, map[string]any{
+		"title": updatedConcert.Title,
+	})
+
 	resp := MapDomainToConcertResponse(updatedConcert)
 	responseHandler.JSONResponse(resp, http.StatusOK)
 }

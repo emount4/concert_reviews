@@ -36,6 +36,10 @@ func (h *ArtistHTTPHandler) PatchArtist(rw http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	h.logAdminAction(ctx, "artist_updated", id, map[string]any{
+		"name": domain.Name,
+	})
+
 	resp := MapDomainToResponse(domain)
 	responseHandler.JSONResponse(resp, http.StatusOK)
 }

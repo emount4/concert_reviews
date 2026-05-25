@@ -17,6 +17,10 @@ func (s *ConcertService) DeleteConcertSoft(ctx context.Context, id uuid.UUID) er
 		return fmt.Errorf("soft delete concert %s in repository: %w", id, err)
 	}
 
+	if s.statsCache != nil {
+		_ = s.statsCache.InvalidateGlobalStats(ctx)
+	}
+
 	return nil
 }
 
@@ -32,6 +36,10 @@ func (s *ConcertService) DeleteConcertHard(ctx context.Context, id uuid.UUID) er
 
 	if err := s.concertRepository.DeleteConcertHard(ctx, id); err != nil {
 		return fmt.Errorf("hard delete concert %s from database: %w", id, err)
+	}
+
+	if s.statsCache != nil {
+		_ = s.statsCache.InvalidateGlobalStats(ctx)
 	}
 
 	if concert.PosterKey != nil && *concert.PosterKey != "" {

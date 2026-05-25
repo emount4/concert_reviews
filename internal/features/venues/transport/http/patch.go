@@ -38,6 +38,10 @@ func (h *VenueHTTPHandler) UpdateVenue(rw http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	h.logAdminAction(ctx, "venue_updated", id, map[string]any{
+		"name": updatedVenue.Name,
+	})
+
 	resp := MapDomainToVenueResponse(updatedVenue)
 	responseHandler.JSONResponse(resp, http.StatusOK)
 }

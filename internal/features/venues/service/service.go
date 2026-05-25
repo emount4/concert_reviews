@@ -10,6 +10,7 @@ import (
 type VenueService struct {
 	venueRepository VenueRepository
 	s3              core_ports.S3Provider
+	statsCache      GlobalStatsCache
 }
 
 type VenueRepository interface {
@@ -46,12 +47,23 @@ type VenueRepository interface {
 	CityExists(ctx context.Context, id int) (bool, error)
 }
 
+type GlobalStatsCache interface {
+	InvalidateGlobalStats(ctx context.Context) error
+}
+
 func NewVenueService(
 	venueRepository VenueRepository,
 	s3 core_ports.S3Provider,
+	statsCache ...GlobalStatsCache,
 ) *VenueService {
+	var cache GlobalStatsCache
+	if len(statsCache) > 0 {
+		cache = statsCache[0]
+	}
+
 	return &VenueService{
 		venueRepository: venueRepository,
 		s3:              s3,
+		statsCache:      cache,
 	}
 }

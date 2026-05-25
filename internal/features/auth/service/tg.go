@@ -59,6 +59,9 @@ func (s *AuthService) LoginTG(
 		}
 		return core_domain.AuthResponse{}, fmt.Errorf("get user by telegram id: %w", err)
 	}
+	if !user.IsActive || user.IsBanned {
+		return core_domain.AuthResponse{}, fmt.Errorf("%w: account is not available", core_errors.ErrUnauthorized)
+	}
 
 	tokens, err := s.jwt.Generate(user.ID, user.RoleID, s.config.AccessTokenTTL, s.config.RefreshTokenTTL)
 	if err != nil {

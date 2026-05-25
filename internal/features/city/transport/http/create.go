@@ -31,6 +31,11 @@ func (h *CityHTTPHandler) Create(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.logAdminAction(ctx, "city_created", createdCity.CityID, map[string]any{
+		"name": createdCity.Name,
+		"slug": createdCity.Slug,
+	})
+
 	rw.Header().Set("Content-Type", "application/json")
 	response := dtoFromDomain(createdCity)
 

@@ -2,6 +2,7 @@ package core_postgres_repository
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/emount4/concert_reviews/internal/core/domain"
 	core_logger "github.com/emount4/concert_reviews/internal/core/logger"
@@ -22,11 +23,17 @@ func NewAuditRepository(pool core_postgres_pool.Pool, log *core_logger.Logger) *
 }
 
 func (r *AuditRepository) Log(ctx context.Context, l domain.AdminLog) {
+	details, err := json.Marshal(l.Details)
+	if err != nil {
+		r.log.Error("failed to marshal admin audit details", zap.Error(err))
+		return
+	}
+
 	query := `
 		INSERT INTO moderation_logs (moderator_user_id, action, target_id, target_type, details)
-		VALUES ($1, $2, $3, $4, $5)
+		VALUES ($1, $2, $3, $4::target_type_enum, $5::jsonb)
 	`
-	_, err := r.pool.Exec(ctx, query, l.ModeratorID, l.Action, l.TargetID, l.TargetType, l.Details)
+	_, err = r.pool.Exec(ctx, query, l.ModeratorID, l.Action, l.TargetID, l.TargetType, details)
 	if err != nil {
 		r.log.Error("failed to write admin audit log", zap.Error(err))
 	}

@@ -17,6 +17,7 @@ var (
 type AuthService struct {
 	authRepository AuthRepository
 	txManager      TxManager
+	statsCache     GlobalStatsCache
 
 	validate *validator.Validate
 	hasher   PasswordHasher
@@ -42,16 +43,27 @@ type AuthRepository interface {
 	LinkTG(ctx context.Context, userID uuid.UUID, username string, tgID int64) error
 }
 
+type GlobalStatsCache interface {
+	InvalidateGlobalStats(ctx context.Context) error
+}
+
 func NewAuthService(
 	authRepository AuthRepository,
 	txManager TxManager,
 	config Config,
 	hasher PasswordHasher,
 	jwt JWTManager,
+	statsCache ...GlobalStatsCache,
 ) *AuthService {
+	var cache GlobalStatsCache
+	if len(statsCache) > 0 {
+		cache = statsCache[0]
+	}
+
 	return &AuthService{
 		authRepository: authRepository,
 		txManager:      txManager,
+		statsCache:     cache,
 		validate:       validator.New(),
 		hasher:         hasher,
 		jwt:            jwt,

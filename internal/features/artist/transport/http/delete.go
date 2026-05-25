@@ -24,6 +24,8 @@ func (h *ArtistHTTPHandler) DeleteArtistHard(rw http.ResponseWriter, r *http.Req
 		return
 	}
 
+	h.logAdminAction(ctx, "artist_hard_deleted", id, nil)
+
 	rw.WriteHeader(http.StatusNoContent)
 }
 
@@ -42,6 +44,8 @@ func (h *ArtistHTTPHandler) DeleteArtistSoft(rw http.ResponseWriter, r *http.Req
 		responseHandler.ErrorResponse(err, "failed to soft delete artist")
 		return
 	}
+
+	h.logAdminAction(ctx, "artist_soft_deleted", id, nil)
 
 	rw.WriteHeader(http.StatusNoContent)
 }
@@ -62,6 +66,10 @@ func (h *ArtistHTTPHandler) RestoreArtist(rw http.ResponseWriter, r *http.Reques
 		responseHandler.ErrorResponse(err, "failed to restore artist")
 		return
 	}
+
+	h.logAdminAction(ctx, "artist_restored", id, map[string]any{
+		"name": restoredArtist.Name,
+	})
 
 	rw.Header().Set("Content-Type", "application/json")
 	response := MapDomainToResponse(restoredArtist)

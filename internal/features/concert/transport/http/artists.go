@@ -41,6 +41,11 @@ func (h *ConcertHTTPHandler) AddConcertArtist(rw http.ResponseWriter, r *http.Re
 		return
 	}
 
+	h.logAdminAction(ctx, "concert_artist_added", concertID, map[string]any{
+		"artist_id": req.ArtistID,
+		"is_main":   req.IsMain,
+	})
+
 	responseHandler.JSONResponse(nil, http.StatusNoContent)
 }
 
@@ -75,6 +80,10 @@ func (h *ConcertHTTPHandler) RemoveConcertArtist(rw http.ResponseWriter, r *http
 		responseHandler.ErrorResponse(err, "failed to remove artist from concert")
 		return
 	}
+
+	h.logAdminAction(ctx, "concert_artist_removed", concertID, map[string]any{
+		"artist_id": artistID,
+	})
 
 	responseHandler.JSONResponse(nil, http.StatusNoContent)
 }
@@ -117,6 +126,11 @@ func (h *ConcertHTTPHandler) UpdateConcertArtistIsMain(rw http.ResponseWriter, r
 		responseHandler.ErrorResponse(err, "failed to update artist main status")
 		return
 	}
+
+	h.logAdminAction(ctx, "concert_artist_main_updated", concertID, map[string]any{
+		"artist_id": artistID,
+		"is_main":   req.IsMain,
+	})
 
 	responseHandler.JSONResponse(nil, http.StatusNoContent)
 }
