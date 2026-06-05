@@ -64,6 +64,7 @@ func MapAdminUserToResponse(user domain.User) AdminUserResponse {
 		RoleID:           user.RoleID,
 		IsEmailVerified:  user.IsEmailVerified,
 		IsActive:         user.IsActive,
+		IsDeleted:        !user.IsActive,
 		IsBanned:         user.IsBanned,
 		BannedByUserID:   user.BannedByUserID,
 		CreatedAt:        user.CreatedAt.Format(time.RFC3339),

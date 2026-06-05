@@ -2,6 +2,7 @@ package review_transport_http
 
 import (
 	"net/http"
+	"strings"
 
 	core_logger "github.com/emount4/concert_reviews/internal/core/logger"
 	core_http_middleware "github.com/emount4/concert_reviews/internal/core/transport/http/middleware"
@@ -98,11 +99,16 @@ func (h *ReviewHTTPHandler) GetPendingReviews(rw http.ResponseWriter, r *http.Re
 	ctx := r.Context()
 	res := core_http_response.NewHTTPResponseHandler(core_logger.FromContext(ctx), rw)
 
-	limit, offset, _ := core_http_request.GetLimitOffsetByQueryParam(r)
-
-	reviews, total, err := h.reviewService.GetPendingReviews(ctx, limit, offset)
+	limit, offset, err := core_http_request.GetLimitOffsetByQueryParam(r)
 	if err != nil {
-		res.ErrorResponse(err, "failed to fetch pending queue")
+		res.ErrorResponse(err, "failed to get limit/offset")
+		return
+	}
+	status := strings.TrimSpace(r.URL.Query().Get("status"))
+
+	reviews, total, err := h.reviewService.GetPendingReviews(ctx, status, limit, offset)
+	if err != nil {
+		res.ErrorResponse(err, "failed to fetch admin reviews")
 		return
 	}
 

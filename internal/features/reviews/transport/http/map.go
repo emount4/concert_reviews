@@ -60,6 +60,7 @@ func MapDomainToReviewResponse(r domain.Review) ReviewResponse {
 			ID:        r.UserID,
 			Username:  r.AuthorName,
 			AvatarURL: r.AuthorAvatar,
+			IsDeleted: r.AuthorIsDeleted,
 		},
 
 		ConcertTitle: r.ConcertTitle,

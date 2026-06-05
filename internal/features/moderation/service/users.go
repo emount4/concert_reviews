@@ -102,6 +102,17 @@ func (s *ModerationService) AnonymizeUser(
 		return domain.User{}, fmt.Errorf("moderator cannot anonymize self: %w", core_errors.ErrForbidden)
 	}
 
+	target, err := s.moderationRepository.GetUserByID(ctx, targetID)
+	if err != nil {
+		return domain.User{}, fmt.Errorf("get target user: %w", err)
+	}
+	if target.RoleID == domain.RoleSuperAdminID {
+		return domain.User{}, fmt.Errorf("super admin cannot anonymize another super admin: %w", core_errors.ErrForbidden)
+	}
+	if !target.IsActive {
+		return domain.User{}, fmt.Errorf("user is already anonymized: %w", core_errors.ErrConflict)
+	}
+
 	updated, err := s.moderationRepository.AnonymizeUser(ctx, moderatorID, targetID)
 	if err != nil {
 		return domain.User{}, fmt.Errorf("anonymize user: %w", err)

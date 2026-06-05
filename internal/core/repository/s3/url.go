@@ -24,6 +24,9 @@ func (s *S3Storage) GetUploadURL(
 func (s *S3Storage) GetUploadForm(
 	ctx context.Context,
 	objectName string,
+	contentType string,
+	minSize int64,
+	maxSize int64,
 	expires time.Duration,
 ) (string, map[string]string, error) {
 	policy := minio.NewPostPolicy()
@@ -36,12 +39,17 @@ func (s *S3Storage) GetUploadForm(
 	if err := policy.SetExpires(time.Now().Add(expires)); err != nil {
 		return "", nil, fmt.Errorf("set policy expiry: %w", err)
 	}
-	if err := policy.SetContentLengthRange(s.minSize, s.maxSize); err != nil {
+	if minSize < 0 {
+		minSize = s.minSize
+	}
+	if maxSize <= 0 {
+		maxSize = s.maxSize
+	}
+	if err := policy.SetContentLengthRange(minSize, maxSize); err != nil {
 		return "", nil, fmt.Errorf("set size policy: %w", err)
 	}
-	if len(s.contentTypes) > 0 {
-		contentTypeStartsWith := strings.Join(s.contentTypes, ",")
-		if err := policy.SetContentTypeStartsWith(contentTypeStartsWith); err != nil {
+	if contentType != "" {
+		if err := policy.SetContentType(contentType); err != nil {
 			return "", nil, fmt.Errorf("set content type policy: %w", err)
 		}
 	}
@@ -56,6 +64,9 @@ func (s *S3Storage) GetUploadForm(
 		result[k] = v
 	}
 	result["url"] = url.String()
+	if contentType != "" {
+		result["Content-Type"] = contentType
+	}
 
 	return url.String(), result, nil
 }

@@ -217,14 +217,16 @@ func (r *ArtistRepository) GetArtistsAdmin(
 	}
 
 	// Фильтр по статусу
-	if status != "" {
+	if status == "deleted" {
+		query += " AND a.deleted_at IS NOT NULL"
+	} else if status != "" {
 		query += fmt.Sprintf(" AND a.status = $%d", argIdx)
 		args = append(args, status)
 		argIdx++
 	}
 
 	// Фильтр по deleted_at
-	if !includeDeleted {
+	if !includeDeleted && status != "deleted" {
 		query += " AND a.deleted_at IS NULL"
 	}
 
@@ -271,12 +273,14 @@ func (r *ArtistRepository) GetArtistsAdmin(
 		countArgs = append(countArgs, "%"+search+"%")
 		argIdxCount++
 	}
-	if status != "" {
+	if status == "deleted" {
+		countQuery += " AND a.deleted_at IS NOT NULL"
+	} else if status != "" {
 		countQuery += fmt.Sprintf(" AND a.status = $%d", argIdxCount)
 		countArgs = append(countArgs, status)
 		argIdxCount++
 	}
-	if !includeDeleted {
+	if !includeDeleted && status != "deleted" {
 		countQuery += " AND a.deleted_at IS NULL"
 	}
 	if hasReviews != nil {

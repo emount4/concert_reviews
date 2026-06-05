@@ -225,9 +225,15 @@ func (r *ModerationRepository) AnonymizeUser(
 	if err != nil {
 		return domain.User{}, err
 	}
+	if target.RoleID == domain.RoleSuperAdminID {
+		return domain.User{}, fmt.Errorf("super admin cannot anonymize another super admin: %w", core_errors.ErrForbidden)
+	}
+	if !target.IsActive {
+		return domain.User{}, fmt.Errorf("user is already anonymized: %w", core_errors.ErrConflict)
+	}
 
 	deletedEmail := fmt.Sprintf("deleted_%s@concert.bot", targetID.String())
-	deletedUsername := fmt.Sprintf("User_%s", strings.ReplaceAll(targetID.String(), "-", "")[:8])
+	deletedUsername := fmt.Sprintf("deleted_user_%s", strings.ReplaceAll(targetID.String(), "-", "")[:12])
 
 	if _, err := tx.Exec(ctx, `
 		UPDATE users
@@ -259,6 +265,7 @@ func (r *ModerationRepository) AnonymizeUser(
 		"old_email":    target.Email,
 		"old_username": target.Username,
 		"old_role_id":  target.RoleID,
+		"new_username": deletedUsername,
 	}); err != nil {
 		return domain.User{}, err
 	}

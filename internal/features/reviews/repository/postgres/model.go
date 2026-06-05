@@ -31,6 +31,7 @@ type reviewRecord struct {
 	// Поля из JOIN
 	AuthorName       string  `db:"author_name"`
 	AuthorAvatar     *string `db:"author_avatar"`
+	AuthorIsDeleted  bool    `db:"author_is_deleted"`
 	ConcertTitle     string  `db:"concert_title"`
 	ConcertPosterURL *string `db:"concert_poster_url"`
 	LikesCount       int     `db:"likes_count"`
@@ -64,6 +65,7 @@ func (r reviewRecord) MapToDomain() domain.Review {
 		DeletedAt:         r.DeletedAt,
 		AuthorName:        r.AuthorName,
 		AuthorAvatar:      r.AuthorAvatar,
+		AuthorIsDeleted:   r.AuthorIsDeleted,
 		ConcertTitle:      r.ConcertTitle,
 		ConcertPosterURL:  r.ConcertPosterURL,
 		LikesCount:        r.LikesCount,

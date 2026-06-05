@@ -33,6 +33,7 @@ type concertRecord struct {
 	SumP4          *int       `db:"sum_p4"`
 	SumP5          *int       `db:"sum_p5"`
 	SumRatingTotal *int64     `db:"sum_rating_total"`
+	FavoritesCount int        `db:"favorites_count"`
 	StatsUpdatedAt *time.Time `db:"stats_updated_at"`
 
 	// Список артистов в формате JSON
@@ -72,6 +73,7 @@ func (r concertRecord) MapToDomain() domain.Concert {
 			SumP4:          *r.SumP4,
 			SumP5:          *r.SumP5,
 			SumRatingTotal: *r.SumRatingTotal,
+			FavoritesCount: r.FavoritesCount,
 			UpdatedAt:      *r.StatsUpdatedAt,
 		}
 	}

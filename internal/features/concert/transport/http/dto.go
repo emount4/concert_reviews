@@ -60,6 +60,7 @@ type ConcertStatsResponse struct {
 	AvgP3          float64 `json:"avg_p3"`
 	AvgP4          float64 `json:"avg_p4"`
 	AvgP5          float64 `json:"avg_p5"`
+	FavoritesCount int     `json:"favorites_count"`
 	UpdatedAt      string  `json:"updated_at"`
 }
 

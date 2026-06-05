@@ -1,14 +1,15 @@
-package domain
+package domain_test
 
 import (
 	"strings"
 	"testing"
 
+	"github.com/emount4/concert_reviews/internal/core/domain"
 	"github.com/google/uuid"
 )
 
 func TestReviewCalculateRatingWithBaseCoefficient(t *testing.T) {
-	review := Review{
+	review := domain.Review{
 		UserID:    uuid.New(),
 		ConcertID: uuid.New(),
 		Title:     "Тестовая рецензия",
@@ -29,7 +30,7 @@ func TestReviewCalculateRatingWithBaseCoefficient(t *testing.T) {
 }
 
 func TestReviewCalculateRatingMaxValue(t *testing.T) {
-	review := Review{
+	review := domain.Review{
 		UserID:    uuid.New(),
 		ConcertID: uuid.New(),
 		Title:     "Тестовая рецензия",
@@ -50,7 +51,7 @@ func TestReviewCalculateRatingMaxValue(t *testing.T) {
 }
 
 func TestReviewValidateSuccess(t *testing.T) {
-	review := Review{
+	review := domain.Review{
 		UserID:    uuid.New(),
 		ConcertID: uuid.New(),
 		Title:     "Хороший концерт",
@@ -68,7 +69,7 @@ func TestReviewValidateSuccess(t *testing.T) {
 }
 
 func TestReviewValidateEmptyTitle(t *testing.T) {
-	review := Review{
+	review := domain.Review{
 		UserID:    uuid.New(),
 		ConcertID: uuid.New(),
 		Title:     "",
@@ -86,7 +87,7 @@ func TestReviewValidateEmptyTitle(t *testing.T) {
 }
 
 func TestReviewValidateShortText(t *testing.T) {
-	review := Review{
+	review := domain.Review{
 		UserID:    uuid.New(),
 		ConcertID: uuid.New(),
 		Title:     "Короткая рецензия",
@@ -104,7 +105,7 @@ func TestReviewValidateShortText(t *testing.T) {
 }
 
 func TestReviewValidateInvalidScore(t *testing.T) {
-	review := Review{
+	review := domain.Review{
 		UserID:    uuid.New(),
 		ConcertID: uuid.New(),
 		Title:     "Рецензия с ошибкой",

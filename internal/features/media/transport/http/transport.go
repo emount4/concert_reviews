@@ -10,7 +10,7 @@ import (
 
 // Service теперь работает только с Доменными моделями
 type Service interface {
-	PrepareBatchUpload(ctx context.Context, files []core_models.MediaUploadParams) ([]core_models.MediaUploadTicket, error)
+	PrepareBatchUpload(ctx context.Context, userID string, roleID int, purpose string, files []core_models.MediaUploadParams) ([]core_models.MediaUploadTicket, error)
 }
 
 type MediaHTTPHandler struct {

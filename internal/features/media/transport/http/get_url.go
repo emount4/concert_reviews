@@ -5,6 +5,7 @@ import (
 
 	core_models "github.com/emount4/concert_reviews/internal/core/domain/models"
 	core_logger "github.com/emount4/concert_reviews/internal/core/logger"
+	core_http_middleware "github.com/emount4/concert_reviews/internal/core/transport/http/middleware"
 	core_http_request "github.com/emount4/concert_reviews/internal/core/transport/http/request"
 	core_http_response "github.com/emount4/concert_reviews/internal/core/transport/http/response"
 )
@@ -20,10 +21,21 @@ func (h *MediaHTTPHandler) GetPresignedURLs(rw http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	userID, err := core_http_middleware.GetUserID(ctx)
+	if err != nil {
+		responseHandler.ErrorResponse(err, "failed to get user id")
+		return
+	}
+	roleID, err := core_http_middleware.GetRoleID(ctx)
+	if err != nil {
+		responseHandler.ErrorResponse(err, "failed to get role id")
+		return
+	}
+
 	domainParams := dtoToDomain(req)
 
 	// Вызываем сервис, передавая доменные модели
-	tickets, err := h.mediaService.PrepareBatchUpload(ctx, domainParams)
+	tickets, err := h.mediaService.PrepareBatchUpload(ctx, userID.String(), roleID, req.Purpose, domainParams)
 	if err != nil {
 		responseHandler.ErrorResponse(err, "failed to prepare upload links")
 		return
@@ -37,8 +49,9 @@ func dtoToDomain(dto BatchUploadRequest) []core_models.MediaUploadParams {
 	domainParams := make([]core_models.MediaUploadParams, len(dto.Files))
 	for i, f := range dto.Files {
 		domainParams[i] = core_models.MediaUploadParams{
-			FileName: f.FileName,
-			FileSize: f.FileSize,
+			FileName:    f.FileName,
+			FileSize:    f.FileSize,
+			ContentType: f.ContentType,
 		}
 	}
 	return domainParams

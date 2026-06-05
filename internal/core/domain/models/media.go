@@ -1,8 +1,9 @@
 package core_models
 
 type MediaUploadParams struct {
-	FileName string
-	FileSize int64
+	FileName    string
+	FileSize    int64
+	ContentType string
 }
 
 type MediaUploadTicket struct {

@@ -2,6 +2,7 @@ package moderation_transport_http
 
 import (
 	"net/http"
+	"strings"
 
 	core_logger "github.com/emount4/concert_reviews/internal/core/logger"
 	core_http_request "github.com/emount4/concert_reviews/internal/core/transport/http/request"
@@ -20,8 +21,8 @@ func (h *ModerationHTTPHandler) GetAdminLogs(rw http.ResponseWriter, r *http.Req
 	}
 
 	var moderatorID *uuid.UUID
-	if value := core_http_request.GetStringQueryParam(r, "moderator_id"); value != nil {
-		parsedID, err := uuid.Parse(*value)
+	if value := strings.TrimSpace(r.URL.Query().Get("moderator_id")); value != "" {
+		parsedID, err := uuid.Parse(value)
 		if err != nil {
 			res.ErrorResponse(err, "invalid moderator id")
 			return

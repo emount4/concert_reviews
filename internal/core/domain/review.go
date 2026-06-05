@@ -44,6 +44,7 @@ type Review struct {
 	// Поля обогащения (заполняются репозиторием через JOIN)
 	AuthorName       string
 	AuthorAvatar     *string
+	AuthorIsDeleted  bool
 	ConcertTitle     string
 	ConcertPosterURL *string
 	ConcertArtists   []ConcertArtist

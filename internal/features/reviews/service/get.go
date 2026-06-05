@@ -3,6 +3,7 @@ package review_service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/emount4/concert_reviews/internal/core/domain"
 	core_errors "github.com/emount4/concert_reviews/internal/core/errors"
@@ -45,9 +46,18 @@ func (s *ReviewService) GetReviewByID(ctx context.Context, id uuid.UUID) (domain
 	return review, nil
 }
 
-func (s *ReviewService) GetPendingReviews(ctx context.Context, limit, offset *int) ([]domain.Review, int, error) {
+func (s *ReviewService) GetPendingReviews(ctx context.Context, status string, limit, offset *int) ([]domain.Review, int, error) {
+	status = strings.TrimSpace(status)
+	if status == "" {
+		status = string(domain.StatusPending)
+	}
+	switch domain.ModerationStatus(status) {
+	case domain.StatusPending, domain.StatusRejected, domain.StatusApproved:
+	default:
+		return nil, 0, fmt.Errorf("invalid review status: %w", core_errors.ErrInvalidArgument)
+	}
 
-	reviews, total, err := s.reviewRepository.GetPendingReviews(ctx, limit, offset)
+	reviews, total, err := s.reviewRepository.GetPendingReviews(ctx, status, limit, offset)
 	if err != nil {
 		return nil, 0, fmt.Errorf("fetch pending queue: %w", err)
 	}

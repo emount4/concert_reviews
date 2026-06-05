@@ -30,7 +30,7 @@ type ReviewRepository interface {
 		limit, offset *int,
 	) (reviews []domain.Review, totalCount int, err error)
 	GetLikers(ctx context.Context, reviewID uuid.UUID) ([]domain.User, error)
-	GetPendingReviews(ctx context.Context, limit, offset *int) ([]domain.Review, int, error)
+	GetPendingReviews(ctx context.Context, status string, limit, offset *int) ([]domain.Review, int, error)
 
 	ApproveReview(
 		ctx context.Context,

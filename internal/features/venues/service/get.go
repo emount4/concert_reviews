@@ -73,7 +73,7 @@ func (s *VenueService) GetVenuesAdmin(
 		return nil, 0, fmt.Errorf("venue repository: %w", core_errors.ErrRepositoryNotConfigured)
 	}
 
-	if status != "" && !isValidContentStatus(status) {
+	if status != "" && status != "deleted" && !isValidContentStatus(status) {
 		return nil, 0, fmt.Errorf("invalid status filter: %w", core_errors.ErrInvalidArgument)
 	}
 	if capacityFrom != nil && *capacityFrom < 0 {

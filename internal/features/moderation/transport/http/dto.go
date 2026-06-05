@@ -43,6 +43,7 @@ type AdminUserResponse struct {
 	RoleID           int                     `json:"role_id"`
 	IsEmailVerified  bool                    `json:"is_email_verified"`
 	IsActive         bool                    `json:"is_active"`
+	IsDeleted        bool                    `json:"is_deleted"`
 	IsBanned         bool                    `json:"is_banned"`
 	BannedByUserID   *uuid.UUID              `json:"banned_by_user_id,omitempty"`
 	CreatedAt        string                  `json:"created_at"`

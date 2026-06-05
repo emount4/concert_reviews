@@ -84,6 +84,7 @@ func MapDomainToConcertResponse(c domain.Concert) ConcertResponse {
 			AvgP3:          c.Stats.AvgByParam(3),
 			AvgP4:          c.Stats.AvgByParam(4),
 			AvgP5:          c.Stats.AvgByParam(5),
+			FavoritesCount: c.Stats.FavoritesCount,
 			UpdatedAt:      c.Stats.UpdatedAt.Format(time.RFC3339),
 		}
 	}
@@ -198,6 +199,7 @@ func MapDomainToConcertAdminResponse(c domain.Concert) ConcertResponseAdmin {
 			AvgP3:          c.Stats.AvgByParam(3),
 			AvgP4:          c.Stats.AvgByParam(4),
 			AvgP5:          c.Stats.AvgByParam(5),
+			FavoritesCount: c.Stats.FavoritesCount,
 			UpdatedAt:      c.Stats.UpdatedAt.Format(time.RFC3339),
 		}
 	}

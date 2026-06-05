@@ -253,7 +253,9 @@ func (r *VenueRepository) GetVenuesAdmin(
 	}
 
 	// Фильтр по статусу
-	if status != "" {
+	if status == "deleted" {
+		query += " AND v.deleted_at IS NOT NULL"
+	} else if status != "" {
 		query += fmt.Sprintf(" AND v.status = $%d", argIdx)
 		args = append(args, status)
 		argIdx++
@@ -270,7 +272,7 @@ func (r *VenueRepository) GetVenuesAdmin(
 	}
 
 	// Фильтр по deleted_at (если не включены удалённые)
-	if !includeDeleted {
+	if !includeDeleted && status != "deleted" {
 		query += " AND v.deleted_at IS NULL"
 	}
 
@@ -315,7 +317,9 @@ func (r *VenueRepository) GetVenuesAdmin(
 		countArgs = append(countArgs, "%"+search+"%")
 		argIdxCount++
 	}
-	if status != "" {
+	if status == "deleted" {
+		countQuery += " AND v.deleted_at IS NOT NULL"
+	} else if status != "" {
 		countQuery += fmt.Sprintf(" AND v.status = $%d", argIdxCount)
 		countArgs = append(countArgs, status)
 		argIdxCount++
@@ -330,7 +334,7 @@ func (r *VenueRepository) GetVenuesAdmin(
 		countArgs = append(countArgs, *capacityTo)
 		argIdxCount++
 	}
-	if !includeDeleted {
+	if !includeDeleted && status != "deleted" {
 		countQuery += " AND v.deleted_at IS NULL"
 	}
 

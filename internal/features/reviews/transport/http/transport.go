@@ -14,7 +14,7 @@ type ReviewService interface {
 	CreateReview(ctx context.Context, review domain.Review) (domain.Review, error)
 	GetReviews(ctx context.Context, userID *uuid.UUID, concertID *uuid.UUID, artistID, venueID *int, sort string, direction string, limit, offset *int) ([]domain.Review, int, error)
 	GetReviewByID(ctx context.Context, id uuid.UUID) (domain.Review, error)
-	GetPendingReviews(ctx context.Context, limit, offset *int) ([]domain.Review, int, error)
+	GetPendingReviews(ctx context.Context, status string, limit, offset *int) ([]domain.Review, int, error)
 
 	LikeReview(ctx context.Context, reviewID, userID uuid.UUID) error
 	GetLikers(ctx context.Context, reviewID uuid.UUID) ([]domain.User, error)

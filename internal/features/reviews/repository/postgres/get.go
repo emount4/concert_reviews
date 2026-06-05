@@ -16,7 +16,7 @@ import (
 const baseReviewSelect = `
 	SELECT 
 		r.*,
-		u.username as author_name, u.avatar_url as author_avatar,
+		u.username as author_name, u.avatar_url as author_avatar, NOT u.is_active as author_is_deleted,
 		c.title as concert_title,
 		c.poster_url as concert_poster_url,
 		(SELECT COUNT(*) FROM review_likes WHERE review_id = r.review_id) as likes_count,
@@ -127,7 +127,7 @@ func (r *ReviewRepository) GetReviews(
 			&rec.P1, &rec.P2, &rec.P3, &rec.P4, &rec.P5, &rec.RatingTotal,
 			&rec.Status, &rec.RejectionReason, &rec.ModeratedByUserID, &rec.IsVisible,
 			&rec.CreatedAt, &rec.DeletedAt,
-			&rec.AuthorName, &rec.AuthorAvatar,
+			&rec.AuthorName, &rec.AuthorAvatar, &rec.AuthorIsDeleted,
 			&rec.ConcertTitle, &rec.ConcertPosterURL, &rec.LikesCount, &rec.TotalCount, &rec.MediaJSON, &rec.ConcertArtistsJSON,
 			&rec.IsLikedByMe,
 		)
@@ -221,6 +221,7 @@ func (r *ReviewRepository) attachMediaToReviews(
 
 func (r *ReviewRepository) GetPendingReviews(
 	ctx context.Context,
+	status string,
 	limit, offset *int,
 ) ([]domain.Review, int, error) {
 	ctx, cancel := context.WithTimeout(ctx, r.pool.OpTimeout())
@@ -228,7 +229,7 @@ func (r *ReviewRepository) GetPendingReviews(
 	const adminPendingSelect = `
 		SELECT 
 			r.*,
-			u.username as author_name, u.avatar_url as author_avatar,
+			u.username as author_name, u.avatar_url as author_avatar, NOT u.is_active as author_is_deleted,
 			c.title as concert_title,
 			c.poster_url as concert_poster_url,
 			(SELECT COUNT(*) FROM review_likes WHERE review_id = r.review_id) as likes_count,
@@ -256,15 +257,15 @@ func (r *ReviewRepository) GetPendingReviews(
 		FROM reviews r
 		JOIN users u ON r.user_id = u.user_id
 		JOIN concerts c ON r.concert_id = c.concert_id
-		WHERE r.status = 'pending' AND r.deleted_at IS NULL
+		WHERE r.status = $1 AND r.deleted_at IS NULL
 		ORDER BY r.created_at ASC -- Сначала самые старые (очередь)
 	`
 
-	var args []any
+	args := []any{status}
 	query := adminPendingSelect
 
 	if limit != nil && offset != nil {
-		query += " LIMIT $1 OFFSET $2"
+		query += " LIMIT $2 OFFSET $3"
 		args = append(args, *limit, *offset)
 	}
 
@@ -284,7 +285,7 @@ func (r *ReviewRepository) GetPendingReviews(
 			&rec.P1, &rec.P2, &rec.P3, &rec.P4, &rec.P5, &rec.RatingTotal,
 			&rec.Status, &rec.RejectionReason, &rec.ModeratedByUserID, &rec.IsVisible,
 			&rec.CreatedAt, &rec.DeletedAt,
-			&rec.AuthorName, &rec.AuthorAvatar,
+			&rec.AuthorName, &rec.AuthorAvatar, &rec.AuthorIsDeleted,
 			&rec.ConcertTitle, &rec.ConcertPosterURL, &rec.LikesCount, &rec.TotalCount, &rec.MediaJSON, &rec.ConcertArtistsJSON,
 		)
 		if err != nil {
@@ -347,7 +348,7 @@ func (r *ReviewRepository) GetLikedReviews(
 	query := fmt.Sprintf(`
 		SELECT
 			r.*,
-			u.username as author_name, u.avatar_url as author_avatar,
+			u.username as author_name, u.avatar_url as author_avatar, NOT u.is_active as author_is_deleted,
 			c.title as concert_title,
 			c.poster_url as concert_poster_url,
 			(SELECT COUNT(*) FROM review_likes WHERE review_id = r.review_id) as likes_count,
@@ -406,7 +407,7 @@ func (r *ReviewRepository) GetLikedReviews(
 			&rec.P1, &rec.P2, &rec.P3, &rec.P4, &rec.P5, &rec.RatingTotal,
 			&rec.Status, &rec.RejectionReason, &rec.ModeratedByUserID, &rec.IsVisible,
 			&rec.CreatedAt, &rec.DeletedAt,
-			&rec.AuthorName, &rec.AuthorAvatar,
+			&rec.AuthorName, &rec.AuthorAvatar, &rec.AuthorIsDeleted,
 			&rec.ConcertTitle, &rec.ConcertPosterURL, &rec.LikesCount, &rec.TotalCount,
 			&rec.MediaJSON, &rec.ConcertArtistsJSON, &rec.IsLikedByMe,
 		)
@@ -453,7 +454,7 @@ func (r *ReviewRepository) GetReviewByID(ctx context.Context, id uuid.UUID) (dom
 			r.p1, r.p2, r.p3, r.p4, r.p5, r.rating_total,
 			r.status, r.rejection_reason, r.moderated_by_user_id, r.is_visible,
 			r.created_at, r.deleted_at,
-			u.username as author_name, u.avatar_url as author_avatar,
+			u.username as author_name, u.avatar_url as author_avatar, NOT u.is_active as author_is_deleted,
 			c.title as concert_title,
 			c.poster_url as concert_poster_url,
 			(SELECT COUNT(*) FROM review_likes WHERE review_id = r.review_id) as likes_count,
@@ -492,7 +493,7 @@ func (r *ReviewRepository) GetReviewByID(ctx context.Context, id uuid.UUID) (dom
 		&rec.P1, &rec.P2, &rec.P3, &rec.P4, &rec.P5, &rec.RatingTotal,
 		&rec.Status, &rec.RejectionReason, &rec.ModeratedByUserID, &rec.IsVisible,
 		&rec.CreatedAt, &rec.DeletedAt,
-		&rec.AuthorName, &rec.AuthorAvatar,
+		&rec.AuthorName, &rec.AuthorAvatar, &rec.AuthorIsDeleted,
 		&rec.ConcertTitle, &rec.ConcertPosterURL, &rec.LikesCount,
 		&rec.MediaJSON, &rec.ConcertArtistsJSON,
 	)
@@ -532,7 +533,7 @@ func (r *ReviewRepository) GetUserReviews(ctx context.Context, userID uuid.UUID,
 	query := fmt.Sprintf(`
 		SELECT 
 			r.*,
-			u.username as author_name, u.avatar_url as author_avatar,
+			u.username as author_name, u.avatar_url as author_avatar, NOT u.is_active as author_is_deleted,
 			c.title as concert_title,
 			c.poster_url as concert_poster_url,
 			(SELECT COUNT(*) FROM review_likes WHERE review_id = r.review_id) as likes_count,
@@ -581,7 +582,7 @@ func (r *ReviewRepository) GetUserReviews(ctx context.Context, userID uuid.UUID,
 			&rec.P1, &rec.P2, &rec.P3, &rec.P4, &rec.P5, &rec.RatingTotal,
 			&rec.Status, &rec.RejectionReason, &rec.ModeratedByUserID, &rec.IsVisible,
 			&rec.CreatedAt, &rec.DeletedAt,
-			&rec.AuthorName, &rec.AuthorAvatar,
+			&rec.AuthorName, &rec.AuthorAvatar, &rec.AuthorIsDeleted,
 			&rec.ConcertTitle, &rec.ConcertPosterURL, &rec.LikesCount,
 			&rec.MediaJSON, &rec.ConcertArtistsJSON, &rec.IsLikedByMe,
 		)

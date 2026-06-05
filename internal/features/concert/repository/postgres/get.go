@@ -19,7 +19,9 @@ const baseConcertSelect = `
 		c.concert_id, c.venue_id, c.title, c.date, c.poster_url, c.is_verified, c.created_by_user_id, c.created_at, c.deleted_at,
 		v.name as venue_name,
 		ct.city_id, ct.name as city_name, ct.slug as city_slug,
-		cs.reviews_count, cs.sum_p1, cs.sum_p2, cs.sum_p3, cs.sum_p4, cs.sum_p5, cs.sum_rating_total, cs.updated_at as stats_updated_at,
+		cs.reviews_count, cs.sum_p1, cs.sum_p2, cs.sum_p3, cs.sum_p4, cs.sum_p5, cs.sum_rating_total,
+		COALESCE(cs.favorites_count, 0) AS favorites_count,
+		cs.updated_at as stats_updated_at,
 		(
 			SELECT jsonb_agg(jsonb_build_object(
 				'ArtistID', a.artist_id,
@@ -48,7 +50,7 @@ func (r *ConcertRepository) GetConcertByID(ctx context.Context, id uuid.UUID, us
 	err := r.pool.QueryRow(ctx, query, id).Scan(
 		&rec.ConcertID, &rec.VenueID, &rec.Title, &rec.Date, &rec.PosterKey, &rec.IsVerified, &rec.CreatedByUserID, &rec.CreatedAt, &rec.DeletedAt,
 		&rec.VenueName, &rec.CityID, &rec.CityName, &rec.CitySlug,
-		&rec.ReviewsCount, &rec.SumP1, &rec.SumP2, &rec.SumP3, &rec.SumP4, &rec.SumP5, &rec.SumRatingTotal, &rec.StatsUpdatedAt,
+		&rec.ReviewsCount, &rec.SumP1, &rec.SumP2, &rec.SumP3, &rec.SumP4, &rec.SumP5, &rec.SumRatingTotal, &rec.FavoritesCount, &rec.StatsUpdatedAt,
 		&rec.ArtistsJSON,
 	)
 
@@ -136,10 +138,21 @@ func (r *ConcertRepository) listConcerts(
 		conditions = append(conditions, fmt.Sprintf("v.city_id = $%d", len(args)))
 	}
 
-	// Поиск по названию
-	if search != "" {
+	// Поиск по названию концерта, площадке и артистам
+	if search = strings.TrimSpace(search); search != "" {
 		args = append(args, "%"+search+"%")
-		conditions = append(conditions, fmt.Sprintf("c.title ILIKE $%d", len(args)))
+		argNum := len(args)
+		conditions = append(conditions, fmt.Sprintf(`(
+			c.title ILIKE $%[1]d
+			OR v.name ILIKE $%[1]d
+			OR EXISTS (
+				SELECT 1
+				FROM concert_artists search_ca
+				JOIN artists search_a ON search_a.artist_id = search_ca.artist_id
+				WHERE search_ca.concert_id = c.concert_id
+					AND search_a.name ILIKE $%[1]d
+			)
+		)`, argNum))
 	}
 
 	// Фильтр по артисту (через подзапрос, так как связь многие-ко-многим)
@@ -203,7 +216,7 @@ func (r *ConcertRepository) listConcerts(
 		err := rows.Scan(
 			&rec.ConcertID, &rec.VenueID, &rec.Title, &rec.Date, &rec.PosterKey, &rec.IsVerified, &rec.CreatedByUserID, &rec.CreatedAt, &rec.DeletedAt,
 			&rec.VenueName, &rec.CityID, &rec.CityName, &rec.CitySlug,
-			&rec.ReviewsCount, &rec.SumP1, &rec.SumP2, &rec.SumP3, &rec.SumP4, &rec.SumP5, &rec.SumRatingTotal, &rec.StatsUpdatedAt,
+			&rec.ReviewsCount, &rec.SumP1, &rec.SumP2, &rec.SumP3, &rec.SumP4, &rec.SumP5, &rec.SumRatingTotal, &rec.FavoritesCount, &rec.StatsUpdatedAt,
 			&rec.ArtistsJSON,
 		)
 		if err != nil {

@@ -24,6 +24,7 @@ type AuthorBriefResponse struct {
 	ID        uuid.UUID `json:"id"`
 	Username  string    `json:"username"`
 	AvatarURL *string   `json:"avatar_url,omitempty"`
+	IsDeleted bool      `json:"is_deleted"`
 }
 
 type ReviewMediaResponse struct {
