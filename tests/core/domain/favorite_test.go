@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	core_errors "github.com/emount4/concert_reviews/internal/core/errors"
 	"github.com/emount4/concert_reviews/internal/core/domain"
+	core_errors "github.com/emount4/concert_reviews/internal/core/errors"
 )
 
 func TestParseFavoriteTargetTypeSuccess(t *testing.T) {

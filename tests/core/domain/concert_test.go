@@ -62,9 +62,9 @@ func TestConcertValidateRejectsZeroDate(t *testing.T) {
 func TestConcertValidateRejectsEmptyPosterKey(t *testing.T) {
 	empty := "   "
 	concert := domain.Concert{
-		VenueID: 1,
-		Title:   "Show",
-		Date:    time.Now().Add(24 * time.Hour),
+		VenueID:   1,
+		Title:     "Show",
+		Date:      time.Now().Add(24 * time.Hour),
 		PosterKey: &empty,
 	}
 
@@ -76,9 +76,9 @@ func TestConcertValidateRejectsEmptyPosterKey(t *testing.T) {
 func TestConcertValidateRejectsLongPosterKey(t *testing.T) {
 	longKey := strings.Repeat("a", 2049)
 	concert := domain.Concert{
-		VenueID: 1,
-		Title:   "Show",
-		Date:    time.Now().Add(24 * time.Hour),
+		VenueID:   1,
+		Title:     "Show",
+		Date:      time.Now().Add(24 * time.Hour),
 		PosterKey: &longKey,
 	}
 

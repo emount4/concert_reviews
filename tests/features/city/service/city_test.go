@@ -11,12 +11,12 @@ import (
 )
 
 type fakeCityRepository struct {
-	createCityFn   func(ctx context.Context, city core_models.City) (core_models.City, error)
-	getCitiesFn    func(ctx context.Context, limit, offset *int) ([]core_models.City, error)
-	getCityByIDFn  func(ctx context.Context, id int) (core_models.City, error)
-	deleteCityFn   func(ctx context.Context, id int) error
-	hasVenuesFn    func(ctx context.Context, id int) (bool, error)
-	updateCityFn   func(ctx context.Context, city core_models.City) (core_models.City, error)
+	createCityFn  func(ctx context.Context, city core_models.City) (core_models.City, error)
+	getCitiesFn   func(ctx context.Context, limit, offset *int) ([]core_models.City, error)
+	getCityByIDFn func(ctx context.Context, id int) (core_models.City, error)
+	deleteCityFn  func(ctx context.Context, id int) error
+	hasVenuesFn   func(ctx context.Context, id int) (bool, error)
+	updateCityFn  func(ctx context.Context, city core_models.City) (core_models.City, error)
 
 	createCalls  int
 	getCalls     int
