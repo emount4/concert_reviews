@@ -1,0 +1,14 @@
+.git
+.idea
+.vscode
+out
+**/out
+**/tmp
+**/node_modules
+**/*.test
+**/*_test.go
+**/.env
+**/.env.*
+**/*.log
+**/coverage*
+**/*.sql
